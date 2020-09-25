@@ -1,5 +1,6 @@
 .model small
 .data
+	notification db 'Ingresar cantidades de 3 caracteres$'
 	tInput db 'Ingrese la cantidad de pruebas realizadas: $'
 	ptInput db 'Ingrese la cantidad de pruebas positivas: $'
 
@@ -22,6 +23,16 @@ program:
 	mov ds,ax
 	xor ax,ax
 	xor bx,bx
+
+	;Ask 3 digit numbers only
+	mov dx, offset notification
+	mov ah,09h
+	int 21h
+
+	;Print new line
+	mov dl,0ah
+	mov ah,02h
+	int 21h
 
 	;Ask for tests quantity
 	mov dx,offset tInput
