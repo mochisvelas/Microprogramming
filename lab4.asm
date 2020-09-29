@@ -12,12 +12,14 @@
 
 	inputerror_message db 'ERROR: Invalid input$'
 
-        num1 dw 00h             
-        num2 dw 00h            
+        num1 db 00h             
+        num2 db 00h            
 	optnum db 00h
 
         cont db 00h
-        tmp dw ?
+	cont2 db 00h
+	cont3 db 00h
+        tmp db 00h
 
 .stack
 .code
@@ -99,6 +101,11 @@ program:
 ;-----------------------------------------------------------------------
 	getnum:
 	
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
         ;Ask for first number
         mov dx,offset num1Prompt
         mov ah,09h
@@ -115,21 +122,21 @@ program:
         jmp inputerror          ;If yes, show error
 	bridge:
 
-        cmp cont,01h             ;Check if 2 digits have been inserted
-        je nextnum              ;If yes, go to nextnum
-
         sub al,30h              ;Convert to real number
         xor ah,ah               ;Clear ah
 
         ;Store the tens and hundreds if existent
-        shl bx,01h              ;Multiply itself by 2
-        mov tmp,bx
+        shl bl,01h              ;Multiply itself by 2
+        mov tmp,bl
         mov cl,02h
-        shl bx,cl               ;Multiply itself by 4, so by 8 in total
-        add bx,tmp              ;By 10 in total
-        add bx,ax
-        mov num1,bx             ;Store in variable
+        shl bl,cl               ;Multiply itself by 4, so by 8 in total
+        add bl,tmp              ;By 10 in total
+        add bl,al
+        mov num1,bl             ;Store in variable
         add cont,01h             ;Add 1 to cont
+
+        cmp cont,02h             ;Check if 2 digits have been inserted
+        je nextnum              ;If yes, go to nextnum
 
         jmp num1tag
 
@@ -156,6 +163,7 @@ program:
 	xor bx,bx
 	xor cx,cx
 	mov cont,00h
+	mov tmp,00h
 
 	num2tag:
         mov ah,01h              ;Get digit
@@ -166,21 +174,21 @@ program:
         jmp inputerror          ;If yes, show error
 	tunnel:
 
-        cmp cont,01h             ;Check if 2 digits have been inserted
-        je operation            ;If yes, go to operation
-
         sub al,30h              ;Convert to real number
         xor ah,ah               ;Clear ah
 
         ;Store the tens and hundreds if existent
-        shl bx,01h              ;Multiply itself by 2
-        mov tmp,bx
+        shl bl,01h              ;Multiply itself by 2
+        mov tmp,bl
         mov cl,02h
-        shl bx,cl               ;Multiply itself by 4, so by 8 in total
-        add bx,tmp              ;By 10 in total
-        add bx,ax
-        mov num2,bx             ;Store in variable
+        shl bl,cl               ;Multiply itself by 4, so by 8 in total
+        add bl,tmp              ;By 10 in total
+        add bl,al
+        mov num2,bl             ;Store in variable
         add cont,01h             ;Add 1 to cont
+
+        cmp cont,02h             ;Check if 2 digits have been inserted
+        je operation            ;If yes, go to operation
 
         jmp num2tag
 
@@ -196,14 +204,16 @@ program:
 ;-----------------------------------------------------------------------
 	multiply:
 
-	mov cx,num1
-	mov bx,num2
+	xor ax,ax
+
+	mov cl,num1
+	mov al,num2
 
 	multloop:
-	add bx,num2
+	add bx,ax
 	loop multloop
 
-	mov cont,00h
+	;mov cont,00h
 	jmp printresult
 ;-----------------------------------------------------------------------
 	divide:
@@ -220,6 +230,8 @@ program:
 ;-----------------------------------------------------------------------
 	printresult:
 
+	xor ax,ax
+
 	;If single digit go to print single
 	cmp bx,09h
 	jle printsingle
@@ -229,16 +241,45 @@ program:
 ;-----------------------------------------------------------------------
 	printsingle:
 
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
+	;Print digit
+	mov ah,02h
+	mov dl,bl
+	add dl,30h
+	int 21h
+
+	jmp finalize
+
+;-----------------------------------------------------------------------
+	printcont:
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
 	mov ah,02h
 	mov dl,cont
 	add dl,30h
 	int 21h
 
-	xor dx,dx
+	mov ah,02h
+	mov dl,cont2
+	add dl,30h
+	int 21h
 
-	mov ah,09h
-	mov dx,bx
-	add dx,30h
+	mov ah,02h
+	mov dl,cont3
+	add dl,30h
+	int 21h
+
+	mov ah,02h
+	mov dl,bl
+	add dl,30h
 	int 21h
 
 	jmp finalize
@@ -246,6 +287,21 @@ program:
 	printcomp:
 
 	mov cont,00h
+;-----------------------------------------------------------------------
+	printthounsands:
+
+	sub bx,3E8h
+	
+	cmp bx,00h
+	je singlethousand
+	jl printhundreds
+
+	inc cont
+
+	cmp bx,09h
+	jle printcont
+
+	jmp printthounsands
 ;-----------------------------------------------------------------------
 	printhundreds:
 
@@ -255,10 +311,10 @@ program:
 	je singlehundred 
 	jl printens
 
-	inc cont
+	inc cont2
 
 	cmp bx,09h
-	jle printsingle
+	jle printcont
 
 	jmp printhundreds
 ;-----------------------------------------------------------------------
@@ -268,13 +324,51 @@ program:
 
 	cmp bx,00h
 	je singleten
-	jl printsingle
+	jl printcont
 
-	inc cont
+	inc cont3
 
 	jmp printens
 ;-----------------------------------------------------------------------
+	singlethousand:
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,01h
+	add dl,30h
+	int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+	
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+
+	jmp finalize
+;-----------------------------------------------------------------------
 	singlehundred:
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
 
 	;Print single digit
 	mov ah,02h
@@ -297,6 +391,11 @@ program:
 	jmp finalize
 ;-----------------------------------------------------------------------
 	singleten:
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
 
 	;Print single digit
 	mov ah,02h
