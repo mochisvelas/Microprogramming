@@ -6,17 +6,17 @@
 	factPrompt db '3.Print factors$'
 	biPrompt db '4.Convert to binary$'
 
+	numPrompt db 'Insert number: $'
 	num1Prompt db 'Insert first number: $'
 	num2Prompt db 'Insert second number: $'
 
-        error_message db 'ERROR: Cantidad de pruebas positivas es mayor a pruebas realizadas$'
 	inputerror_message db 'ERROR: Invalid input$'
 
         num1 dw 00h             
         num2 dw 00h            
 	optnum db 00h
 
-        cnt db 00h
+        cont db 00h
         tmp dw ?
 
 .stack
@@ -83,16 +83,16 @@ program:
 	mov optnum,al
 
         cmp optnum,01h          ;Check if input is 1
-        je getnum              ;If yes, go get numbers
+        je getnum              	;If yes, go get numbers
 
         cmp optnum,02h          ;Check if input is 2
-        je getnum              ;If yes, go get numbers
+        je getnum              	;If yes, go get numbers
 	
         cmp optnum,03h          ;Check if input is 3
-        je getnum              ;If yes, go get numbers
+        je getnum            	;If yes, go get number
 
         cmp optnum,04h          ;Check if input is 4
-        je getnum              ;If yes, go get numbers
+        je getnum            	;If yes, go get number
 
 	jmp inputerror
 
@@ -106,14 +106,16 @@ program:
 	
 	xor ax,ax
 
-	num1:
+	num1tag:
         mov ah,01h              ;Get digit
         int 21h
 
         cmp al,0Dh              ;Check if is an enter
-        je inputerror           ;If yes, show error
+	jne bridge
+        jmp inputerror          ;If yes, show error
+	bridge:
 
-        cmp cnt,01h             ;Check if 2 digits have been inserted
+        cmp cont,01h             ;Check if 2 digits have been inserted
         je nextnum              ;If yes, go to nextnum
 
         sub al,30h              ;Convert to real number
@@ -127,9 +129,9 @@ program:
         add bx,tmp              ;By 10 in total
         add bx,ax
         mov num1,bx             ;Store in variable
-        add cnt,01h             ;Add 1 to cont
+        add cont,01h             ;Add 1 to cont
 
-        jmp num1
+        jmp num1tag
 
 ;-----------------------------------------------------------------------
 	nextnum:
@@ -138,24 +140,33 @@ program:
         mov dl,0ah
         mov ah,02h
         int 21h
+
+        cmp optnum,03h          ;Check if input is 3
+        je factors              ;If yes, go to factors
+
+        cmp optnum,04h          ;Check if input is 4
+        je binary 		;If yes, go to binary
 	
         ;Ask for second number
-        mov dx,offset num1Prompt
+        mov dx,offset num2Prompt
         mov ah,09h
         int 21h
 
 	xor ax,ax
 	xor bx,bx
 	xor cx,cx
+	mov cont,00h
 
-	num2:
+	num2tag:
         mov ah,01h              ;Get digit
         int 21h
 
         cmp al,0Dh              ;Check if is an enter
-        je inputerror           ;If yes, show error
+	jne tunnel
+        jmp inputerror          ;If yes, show error
+	tunnel:
 
-        cmp cnt,01h             ;Check if 2 digits have been inserted
+        cmp cont,01h             ;Check if 2 digits have been inserted
         je operation            ;If yes, go to operation
 
         sub al,30h              ;Convert to real number
@@ -169,9 +180,9 @@ program:
         add bx,tmp              ;By 10 in total
         add bx,ax
         mov num2,bx             ;Store in variable
-        add cnt,01h             ;Add 1 to cont
+        add cont,01h             ;Add 1 to cont
 
-        jmp num2
+        jmp num2tag
 
 ;-----------------------------------------------------------------------
 	operation:
@@ -181,34 +192,126 @@ program:
 
         cmp optnum,02h          ;Check if input is 2
         je divide               ;If yes, go to divide
-	
-        cmp optnum,03h          ;Check if input is 3
-        je factors              ;If yes, go to factors
 
-        cmp optnum,04h          ;Check if input is 4
-        je binary 		;If yes, go to binary
 ;-----------------------------------------------------------------------
 	multiply:
 
-	jmp finalize
+	mov cx,num1
+	mov bx,num2
+
+	multloop:
+	add bx,num2
+	loop multloop
+
+	mov cont,00h
+	jmp printresult
 ;-----------------------------------------------------------------------
 	divide:
 
-	jmp finalize
+	jmp printresult
 ;-----------------------------------------------------------------------
 	factors:
 
-	jmp finalize
+	jmp printresult
 ;-----------------------------------------------------------------------
 	binary:
 
+	jmp printresult
+;-----------------------------------------------------------------------
+	printresult:
+
+	;If single digit go to print single
+	cmp bx,09h
+	jle printsingle
+
+	jmp printcomp 		;If is not a single digit go to print comp
+
+;-----------------------------------------------------------------------
+	printsingle:
+
+	mov ah,02h
+	mov dl,cont
+	add dl,30h
+	int 21h
+
+	xor dx,dx
+
+	mov ah,09h
+	mov dx,bx
+	add dx,30h
+	int 21h
+
 	jmp finalize
 ;-----------------------------------------------------------------------
+	printcomp:
 
+	mov cont,00h
 ;-----------------------------------------------------------------------
+	printhundreds:
 
+	sub bx,64h
+
+	cmp bx,00h
+	je singlehundred 
+	jl printens
+
+	inc cont
+
+	cmp bx,09h
+	jle printsingle
+
+	jmp printhundreds
 ;-----------------------------------------------------------------------
+	printens:
 
+	sub bx,0Ah
+
+	cmp bx,00h
+	je singleten
+	jl printsingle
+
+	inc cont
+
+	jmp printens
+;-----------------------------------------------------------------------
+	singlehundred:
+
+	;Print single digit
+	mov ah,02h
+	mov dl,01h
+	add dl,30h
+	int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+
+	jmp finalize
+;-----------------------------------------------------------------------
+	singleten:
+
+	;Print single digit
+	mov ah,02h
+	mov dl,01h
+	add dl,30h
+	int 21h
+
+	;Print single digit
+	mov ah,02h
+	mov dl,00h
+	add dl,30h
+	int 21h
+
+	jmp finalize
+;-----------------------------------------------------------------------
 	;Show input error message
 	inputerror:
         mov dx,offset inputerror_message
