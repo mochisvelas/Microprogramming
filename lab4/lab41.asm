@@ -104,9 +104,9 @@ program:
         add bl,tmp              ;By 10 in total
         add bl,al
         mov num1,bl             ;Store in variable
-        add cont,01h             ;Add 1 to cont
+        inc cont               	;Add 1 to cont
 
-        cmp cont,02h             ;Check if 2 digits have been inserted
+        cmp cont,02h            ;Check if 2 digits have been inserted
         je nextnum              ;If yes, go to nextnum
 
         jmp num1tag
@@ -150,7 +150,7 @@ program:
         add bl,tmp              ;By 10 in total
         add bl,al
         mov num2,bl             ;Store in variable
-        add cont,01h             ;Add 1 to cont
+        inc cont               	;Add 1 to cont
 
         cmp cont,02h             ;Check if 2 digits have been inserted
         je operation            ;If yes, go to operation
@@ -176,19 +176,48 @@ program:
 	mov cl,num1
 	mov al,num2
 
-	multloop:
-	add bx,ax
-	loop multloop
+	;Check if al is 0, if yes go to printresult
+	cmp al,00h
+	je printresult
 
-	jmp printresult
+	;Multiply numbers
+	multag:
+
+	cmp cl,00h
+	je printresult
+
+	add bx,ax
+
+	sub cl,01h
+	jmp multag
 ;-----------------------------------------------------------------------
 	divide:
 
-	jmp printresult
+	mov cl,63h
+	mov al,num1
+
+	xor bx,bx
+
+	cmp num2,00h
+	jne shortcut
+	jmp inputerror
+	shortcut:
+
+	divloop:
+
+	cmp al,00h
+	je printresult
+
+	cmp al,num2
+	jl printresult
+
+	sub al,num2
+
+	inc bx
+
+	loop divloop
 ;-----------------------------------------------------------------------
 	printresult:
-
-	xor ax,ax
 
 	;If single digit go to print single
 	cmp bx,09h
@@ -196,7 +225,7 @@ program:
 
 	mov cont,00h
 
-	jmp subthousands 		;If is not a single digit go to print comp
+	jmp subthousands 		;If is not a single digit go to subthousands
 
 ;-----------------------------------------------------------------------
 	printsingle:
