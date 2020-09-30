@@ -3,10 +3,7 @@
         notification db 'Insert option number$'
         multPrompt db '1.Multiply$'
         divPrompt db '2.Divide$'
-	factPrompt db '3.Print factors$'
-	biPrompt db '4.Convert to binary$'
 
-	numPrompt db 'Insert number: $'
 	num1Prompt db 'Insert first number: $'
 	num2Prompt db 'Insert second number: $'
 
@@ -28,7 +25,7 @@ program:
         mov ds,ax
         xor ax,ax
 
-        ;Ask 3 digit numbers only
+        ;Ask for option number
         mov dx, offset notification
         mov ah,09h
         int 21h
@@ -58,26 +55,6 @@ program:
         mov ah,02h
         int 21h
 
-        ;Show factors option
-        mov dx,offset factPrompt
-        mov ah,09h
-        int 21h
-
-        ;Print new line
-        mov dl,0ah
-        mov ah,02h
-        int 21h
-
-        ;Show binary option
-        mov dx,offset biPrompt
-        mov ah,09h
-        int 21h
-
-        ;Print new line
-        mov dl,0ah
-        mov ah,02h
-        int 21h
-
 	;Get digit
         mov ah,01h   
         int 21h
@@ -89,12 +66,6 @@ program:
 
         cmp optnum,02h          ;Check if input is 2
         je getnum              	;If yes, go get numbers
-	
-        cmp optnum,03h          ;Check if input is 3
-        je getnum            	;If yes, go get number
-
-        cmp optnum,04h          ;Check if input is 4
-        je getnum            	;If yes, go get number
 
 	jmp inputerror
 
@@ -147,12 +118,6 @@ program:
         mov dl,0ah
         mov ah,02h
         int 21h
-
-        cmp optnum,03h          ;Check if input is 3
-        je factors              ;If yes, go to factors
-
-        cmp optnum,04h          ;Check if input is 4
-        je binary 		;If yes, go to binary
 	
         ;Ask for second number
         mov dx,offset num2Prompt
@@ -215,18 +180,9 @@ program:
 	add bx,ax
 	loop multloop
 
-	;mov cont,00h
 	jmp printresult
 ;-----------------------------------------------------------------------
 	divide:
-
-	jmp printresult
-;-----------------------------------------------------------------------
-	factors:
-
-	jmp printresult
-;-----------------------------------------------------------------------
-	binary:
 
 	jmp printresult
 ;-----------------------------------------------------------------------
