@@ -195,7 +195,7 @@ program:
 ;-----------------------------------------------------------------------
 	divide:
 
-	mov cl,63h 		;Store 100 in cl
+	mov cl,63h 		;Store 99 in cl
 	mov al,num1 		;Store num1 in al
 
 	xor bx,bx
