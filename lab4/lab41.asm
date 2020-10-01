@@ -9,9 +9,9 @@
 
 	inputerror_message db 'ERROR: Invalid input$'
 
-        num1 db 00h             
-        num2 db 00h            
-	optnum db 00h
+        num1 db 00h 		;Will store first input number 
+        num2 db 00h             ;Will store second input number
+	optnum db 00h 		;Will store input option number
 
         cont db 00h
 	cont2 db 00h
@@ -173,6 +173,7 @@ program:
 	xor bx,bx
 	xor cx,cx
 
+	;Store nums in registers
 	mov cl,num1
 	mov al,num2
 
@@ -183,12 +184,13 @@ program:
 	;Multiply numbers
 	multag:
 
+	;Check if cl is 0, if yes go to printresult
 	cmp cl,00h
 	je printresult
 
 	add bx,ax
 
-	sub cl,01h
+	dec cl
 	jmp multag
 ;-----------------------------------------------------------------------
 	divide:
@@ -246,7 +248,7 @@ program:
 	jmp finalize 		;Go to finalize
 
 ;-----------------------------------------------------------------------
-	;Count thounsands if any
+	;Count thounsands in result if any
 	subthousands:
 
 	cmp bx,3E8h
@@ -262,7 +264,7 @@ program:
 	jmp subthousands
 
 ;-----------------------------------------------------------------------
-	;Count hundreds if any
+	;Count hundreds in result if any
 	subhundreds:
 
 	cmp bx,64h
@@ -277,7 +279,7 @@ program:
 
 	jmp subhundreds
 ;-----------------------------------------------------------------------
-	;Count tens if any
+	;Count tens in result if any
 	subtens:
 
 	cmp bx,0Ah
@@ -297,22 +299,22 @@ program:
         mov ah,02h
         int 21h
 
-	;Print first cont
+	;Print thounsands
 	mov dl,cont
 	add dl,30h
 	int 21h
 
-	;Print second cont
+	;Print hundreds
 	mov dl,cont2
 	add dl,30h
 	int 21h
 
-	;Print third cont
+	;Print tens
 	mov dl,cont3
 	add dl,30h
 	int 21h
 
-	;Print final remainder
+	;Print units
 	mov dl,bl
 	add dl,30h
 	int 21h

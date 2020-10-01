@@ -1,16 +1,13 @@
 .model small
 .data
-	numPrompt db 'Insert number: $'
+        numPrompt db 'Insert number: $'
 
-	inputerror_message db 'ERROR: Invalid input$'
+        inputerror_message db 'ERROR: Invalid input$'
 
-	num db 00h
+        num db 00h
 
         cont db 00h
-	cont2 db 00h
-	cont3 db 00h
         tmp db 00h
-	save dw 00h
 
 .stack
 .code
@@ -19,24 +16,19 @@ program:
         mov ds,ax
         xor ax,ax
 
-        ;Print new line
-        mov dl,0ah
-        mov ah,02h
-        int 21h
-
         ;Ask for number
         mov dx,offset numPrompt
         mov ah,09h
         int 21h
-	
-	numtag:
+
+        numtag:
         mov ah,01h              ;Get digit
         int 21h
 
         cmp al,0Dh              ;Check if is an enter
-	jne bridge
+        jne bridge
         jmp inputerror          ;If yes, show error
-	bridge:
+        bridge:
 
         sub al,30h              ;Convert to real number
         xor ah,ah               ;Clear ah
@@ -48,20 +40,59 @@ program:
         shl bl,cl               ;Multiply itself by 4, so by 8 in total
         add bl,tmp              ;By 10 in total
         add bl,al
-        mov num,bl             	;Store in variable
-	inc cont 		;Add 1 to cont
+        mov num,bl              ;Store in variable
+        inc cont                ;Add 1 to cont
 
         cmp cont,02h            ;Check if 2 digits have been inserted
-        je binary            	;If yes, go to nextnum
+        je evalnum              ;If yes, go to nextnum
 
         jmp numtag
 ;-----------------------------------------------------------------------
-	binary:
+        evalnum:
 
-	jmp printresult
+	;Clean registers
+	xor ax,ax
+	xor bx,bx
+	xor cx,cx
+
+        mov bl,num 		;Store num in bl
+        mov cl,07h 		;Times to iterate the binary loop
+
+	;Print new line
+        mov ah,02h
+        mov dl,0ah
+        int 21h
+
+	;Binary loop
+        binary:
+
+        xor al,al
+
+        shl bl,01h 		;Shift to left and store the msb in cf flag
+        adc al,00h 		;Add with carry. al = al + cf + 0
+
+	;Print al
+	mov ah,02h
+        mov dl,al
+        add dl,30h
+        int 21h
+
+	;Check if cl is 0
+        cmp cl,00h
+        je finalize
+
+        dec cl 			;Sub 1 to cl
+
+        jmp binary 		;Iterate again
 ;-----------------------------------------------------------------------
-	;Show input error message
-	inputerror:
+        ;Show input error message
+        inputerror:
+
+	;Print new line
+        mov ah,02h
+        mov dl,0ah
+        int 21h
+
         mov dx,offset inputerror_message
         mov ah,09h
         int 21h

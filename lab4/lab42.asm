@@ -8,12 +8,12 @@
 
         inputerror_message db 'ERROR: Invalid input$'
 
-        num db 00h
-        optnum db 00h
+        num db 00h 		;Will store input number
 
-        cont db 00h
-        cont2 db 00h
-        tmp db 00h
+        cont db 00h 		;Will cont times to loopfact
+        cont2 db 00h 		;Will cont tens in num if existent
+
+        tmp db 00h 		
 
 .stack
 .code
@@ -51,48 +51,50 @@ program:
         inc cont                ;Add 1 to cont
 
         cmp cont,02h            ;Check if 2 digits have been inserted
-        je factors              ;If yes, go to nextnum
+        je factors              ;If yes, go to factors
 
         jmp numtag
 
 ;-----------------------------------------------------------------------
+	;Initialize values for loopfact
         factors:
 
         xor ax,ax
         xor bx,bx
-        mov cl,64h
-        mov cont,01h
+        mov cl,64h 		;Times to iterate loopfact
+        mov cont,01h 		;Set cont to 1
 
+	;Loop to print factors
         loopfact:
 
         xor ah,ah
 	
-        mov al,num
+        mov al,num 		;Store num in al
 
-	cmp cont,al
+	cmp cont,al 		;If cont is greater than al finalize
 	jg finalize
 
-        div cont
+        div cont 		;Div al into cont
 
-        cmp ah,00h
+        cmp ah,00h 		;If remainder is not 0 increment
         jne increment
 
-        jmp printfact
+        jmp printfact 		;Go to printfact
 ;-----------------------------------------------------------------------
         increment:
 
-        inc cont
+        inc cont 		;Add 1 to cont
 
-        jmp skip
+        jmp skip 		;Go to skip and iterate again
 ;-----------------------------------------------------------------------
         printfact:
 
-        mov bl,cont      
+        mov bl,cont 		;Store cont in bl 
 
-	inc cont
+	inc cont 		;Add 1 to cont
 
-	cmp bl,09h
-	jnle subtens
+	cmp bl,09h 		;If bl is less or equal than 9 printsingle
+	jnle subtens 		;Jump to subtens if not
 ;-----------------------------------------------------------------------
         printsingle:
 
@@ -101,13 +103,14 @@ program:
         mov ah,02h
         int 21h
 
-        ;Print digit
+        ;Print bl
         mov dl,bl
         add dl,30h
         int 21h
 
-	jmp skip
+	jmp skip 		;Go to skip and iterate again
 ;-----------------------------------------------------------------------
+	;Count how many tens are in bl
         subtens:
 
         cmp bl,0Ah
@@ -119,6 +122,7 @@ program:
 
         jmp subtens
 ;-----------------------------------------------------------------------
+	;Print tens and units
         printcont:
 
         ;Print new line
@@ -126,16 +130,19 @@ program:
         mov dl,0ah
         int 21h
 
+	;Print tens
         mov dl,cont2
         add dl,30h
         int 21h
 
+	;Print units
         mov dl,bl
         add dl,30h
         int 21h
 
-	mov cont2,00h
+	mov cont2,00h 		;Reset cont2
 
+	;Iterate again
 	skip:
         loop loopfact
 ;-----------------------------------------------------------------------
