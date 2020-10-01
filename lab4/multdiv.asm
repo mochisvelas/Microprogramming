@@ -323,6 +323,12 @@ program:
 ;-----------------------------------------------------------------------
 	;Show input error message
 	inputerror:
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
         mov dx,offset inputerror_message
         mov ah,09h
         int 21h
