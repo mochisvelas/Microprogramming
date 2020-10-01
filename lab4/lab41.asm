@@ -193,29 +193,32 @@ program:
 ;-----------------------------------------------------------------------
 	divide:
 
-	mov cl,63h
-	mov al,num1
+	mov cl,63h 		;Store 100 in cl
+	mov al,num1 		;Store num1 in al
 
 	xor bx,bx
 
+	;If divider is 0 show error
 	cmp num2,00h
-	jne shortcut
+	jne divloop
 	jmp inputerror
-	shortcut:
 
+	;Division loop
 	divloop:
 
+	;If dividend is 0 printresult
 	cmp al,00h
 	je printresult
 
+	;If al is less than num2 printresult
 	cmp al,num2
 	jl printresult
 
-	sub al,num2
+	sub al,num2 		;Substract num2 to al
 
-	inc bx
+	inc bx 			;Add 1 to bx
 
-	loop divloop
+	loop divloop 		;Iterate again
 ;-----------------------------------------------------------------------
 	printresult:
 
@@ -223,9 +226,9 @@ program:
 	cmp bx,09h
 	jle printsingle
 
-	mov cont,00h
+	mov cont,00h 		;Reset cont
 
-	jmp subthousands 		;If is not a single digit go to subthousands
+	jmp subthousands 	;If is not a single digit go to subthousands
 
 ;-----------------------------------------------------------------------
 	printsingle:
@@ -240,9 +243,10 @@ program:
 	add dl,30h
 	int 21h
 
-	jmp finalize
+	jmp finalize 		;Go to finalize
 
 ;-----------------------------------------------------------------------
+	;Count thounsands if any
 	subthousands:
 
 	cmp bx,3E8h
@@ -258,6 +262,7 @@ program:
 	jmp subthousands
 
 ;-----------------------------------------------------------------------
+	;Count hundreds if any
 	subhundreds:
 
 	cmp bx,64h
@@ -272,6 +277,7 @@ program:
 
 	jmp subhundreds
 ;-----------------------------------------------------------------------
+	;Count tens if any
 	subtens:
 
 	cmp bx,0Ah
@@ -283,6 +289,7 @@ program:
 
 	jmp subtens
 ;-----------------------------------------------------------------------
+	;Print number
 	printcont:
 
         ;Print new line
@@ -290,18 +297,22 @@ program:
         mov ah,02h
         int 21h
 
+	;Print first cont
 	mov dl,cont
 	add dl,30h
 	int 21h
 
+	;Print second cont
 	mov dl,cont2
 	add dl,30h
 	int 21h
 
+	;Print third cont
 	mov dl,cont3
 	add dl,30h
 	int 21h
 
+	;Print final remainder
 	mov dl,bl
 	add dl,30h
 	int 21h
