@@ -58,31 +58,24 @@ program:
 ;-----------------------------------------------------------------------
         factors:
 
-        mov bl,num
-        mov tmp,bl
         xor ax,ax
         xor bx,bx
-        mov cl,63h
-        mov cont,02h
+        mov cl,64h
+        mov cont,01h
 
         loopfact:
 
-        mov al,cont
-        mul cont
-
-        cmp al,tmp
-        jnle compare
-
         xor ah,ah
+	
+        mov al,num
 
-        mov al,tmp
+	cmp cont,al
+	jg finalize
 
         div cont
 
         cmp ah,00h
         jne increment
-
-        mov tmp,al
 
         jmp printfact
 ;-----------------------------------------------------------------------
@@ -92,16 +85,14 @@ program:
 
         jmp skip
 ;-----------------------------------------------------------------------
-        compare:
-
-        cmp tmp,01h
-        jng finalize
-
-        jmp printemp
-;-----------------------------------------------------------------------
         printfact:
 
         mov bl,cont      
+
+	inc cont
+
+	cmp bl,09h
+	jnle subtens
 ;-----------------------------------------------------------------------
         printsingle:
 
@@ -114,15 +105,8 @@ program:
         mov dl,bl
         add dl,30h
         int 21h
-	
-	skip:
 
-        loop loopfact
-;-----------------------------------------------------------------------
-        printemp:
-
-        mov bl,tmp
-        mov cont2,00h
+	jmp skip
 ;-----------------------------------------------------------------------
         subtens:
 
@@ -138,8 +122,8 @@ program:
         printcont:
 
         ;Print new line
-        mov dl,0ah
         mov ah,02h
+        mov dl,0ah
         int 21h
 
         mov dl,cont2
@@ -150,7 +134,10 @@ program:
         add dl,30h
         int 21h
 
-        jmp finalize
+	mov cont2,00h
+
+	skip:
+        loop loopfact
 ;-----------------------------------------------------------------------
         ;Show input error message
         inputerror:
