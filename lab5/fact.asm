@@ -89,7 +89,9 @@ program:
 	jg inputerror
 
 	call factorial 		;If not, call factorial procedure
-	;Print factorial
+
+	call print_factorial	;Print factorial
+
 	jmp finalize 		;Finalize
 
 ;-----------------------------------------------------------------------
@@ -112,21 +114,6 @@ program:
 ;-----------------------------------------------------------------------
 	factorial proc near
 
-	;Store initial addresses of strings
-	lea si,units_str
-	mov units_i,si
-
-	lea si,tens_str
-	inc si
-	mov tens_i,si
-
-	lea si,hundreds_str
-	inc si
-	inc si
-	mov hundreds_i,si
-
-	lea si,res_str
-	mov res_i,si
 	mov cont,00h
 
 	inc cont
@@ -153,6 +140,8 @@ program:
 	factorial endp
 ;-----------------------------------------------------------------------
 	multiply proc near
+
+	call reset_i_proc
 
 	mov units_cont,00h
 	mov tens_cont,00h
@@ -183,7 +172,7 @@ program:
 	inc hundreds_cont
 
 	cmp bl,09h
-	jle printcont
+	jle store_unit
 
 	jmp subhundreds
 
@@ -213,7 +202,7 @@ program:
 	;Multiply units by res_str loop
 	mult_units_loop:
 
-	mov al,res_str[si] 			;Store first char of res_str in al
+	mov al,[si] 			;Store first char of res_str in al
 	comp al,24h 				;Compare if current char is $
 	je end_units_loop 			;If yes go to end_units_loop
 	
@@ -235,6 +224,7 @@ program:
 	end_units_loop:
 	mov remainder,00h
 	mov carry,00h
+	mov byte ptr[di],24h 			;Truncate units_str with $
 
 	ret
 	mult_units_proc endp
@@ -269,6 +259,7 @@ program:
 	end_tens_loop:
 	mov remainder,00h
 	mov carry,00h
+	mov byte ptr[di],24h 			;Truncate units_str with $
 
 	ret
 	mult_tens_proc endp
@@ -303,6 +294,7 @@ program:
 	end_hundreds_loop:
 	mov remainder,00h
 	mov carry,00h
+	mov byte ptr[di],24h 			;Truncate units_str with $
 
 	ret
 	mult_hundreds_proc endp
@@ -314,7 +306,7 @@ program:
 	cmp al,0Ah
 	jl store_remainder
 
-	sub bl,0Ah
+	sub al,0Ah
 
 	inc carry
 
@@ -328,11 +320,94 @@ program:
 ;-----------------------------------------------------------------------
 	summa_proc proc near
 
+	xor al,al
+
+	summa_loop:
+
+	mov si,[units_i]
+	
+	mov bl,units_str[si]
+	cmp bl,24h
+	je skip_units 				;Go to skip_units
+
+	add al,bl
+	inc si
+	mov units_i,si
+
+	;Skip units if end of units_str
+	skip_units:
+
+	mov si,[tens_i]
+
+	mov bl,tens_str[si]
+	cmp bl,24h
+	je skip_tens
+
+	add al,bl
+	inc si
+	mov tens_i,si
+
+	skip_tens:
+
+	mov si,[hundreds_i]
+
+	mov bl,hundreds_str[si]
+	cmp bl,24h
+	je end_summa_loop
+
+	add al,bl
+	inc si
+	mov hundreds_i,si
+
+	add al,carry
+
+	call calc_carry_proc
+
+	mov si,[res_i]
+	mov byte ptr[si],al
+	inc si
+	mov res_i,si
+
+	jmp summa_loop
+
+	end_summa_loop:
+	mov si,[res_i]
+	mov byte ptr[si],24h 			;Truncate res_str with $
 
 	ret
 	summa_proc endp
 ;-----------------------------------------------------------------------
+	reset_i_proc proc near
+
+	;Store initial addresses of strings
+	lea si,units_str
+	mov units_i,si
+
+	lea si,tens_str
+	inc si
+	mov tens_i,si
+
+	lea si,hundreds_str
+	inc si
+	inc si
+	mov hundreds_i,si
+
+	lea si,res_str
+	mov res_i,si
+
+	ret
+	reset_i_proc endp
+;-----------------------------------------------------------------------
 	newline proc near
+
+	mov dx, offset res_str
+	mov ah,09h
+	int 21h
+
+	ret
+	newline endp
+;-----------------------------------------------------------------------
+	print_factorial proc near
 
         ;Print new line
         mov dl,0ah
@@ -340,6 +415,6 @@ program:
         int 21h
 
 	ret
-	newline endp
+	print_factorial endp
 ;-----------------------------------------------------------------------
 END program
