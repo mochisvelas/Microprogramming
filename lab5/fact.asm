@@ -3,35 +3,18 @@
         notification db 'Insert a 3 digit number no greater than 128$'
         inputerror_message db 'ERROR: Invalid input$'
 
-        ;Aux strings
-        units_str db '$'
-        tens_str db '0$'
-        hundreds_str db '00$'
+	string db 300 dup ('$')
 
-        ;Result string
-        res_str db '1$'
+	aux_string db 300 dup ('$')
 
         carry db 00h
-        remainder db 00h
-
-        ;Aux strings indexes
-        units_i dw 00h
-        tens_i dw 00h
-        hundreds_i dw 00h
-        res_i dw 00h
-
-        ;Conts of operand values
-        units_cont db 00h
-        tens_cont db 00h
-        hundreds_cont db 00h
-
 
         ;Input num
         num db 00h
 
-        ;Aux variables for input num
+        ;Aux variables
         cont db 00h
-        tmp db 00h
+        cont2 db 00h
 
 .stack
 .code
@@ -40,8 +23,279 @@ program:
         mov ds,ax
         xor ax,ax
         xor bx,bx
-
 ;-----------------------------------------------------------------------
+	call store_input
+
+        ;Check if num is not greater than 128
+        checknum:
+
+	xor ax,ax
+
+	mov al,num
+        cmp ax,80h
+        jg error
+
+        call factorial          	;Call factorial procedure
+
+        call print_factorial    	;Print factorial
+
+	jmp finalize
+
+	error:
+	call print_error
+
+        ;Finalize program
+        finalize:
+        mov ah,4Ch
+        int 21h
+;-----------------------------------------------------------------------
+        factorial proc  near
+
+	call num2string 		;Proc to convert input num to string
+	call dup_string 		;Proc to duplicate string
+
+        fact_loop:
+
+	cmp num,00h
+        je end_fact_loop
+
+	dec num
+
+	call mult_strings
+
+	call dup_string
+
+        jmp fact_loop
+
+        end_fact_loop:
+
+        ret
+        factorial endp
+;-----------------------------------------------------------------------
+        mult_strings proc  near
+
+	xor cx,cx
+	xor ax,ax
+	xor bx,bx
+	mov al,num
+	mov cont2,al
+	mov carry,00h
+	xor ax,ax
+
+	lea si,string
+	lea di,aux_string
+
+	;Multiply strings loop
+	mult_loop:
+
+	mov cl,cont2
+	cmp cl,00h
+	je eval_carry
+
+	mov al,[si]
+	mov bl,[di]
+
+	add al,bl
+	add al,carry
+
+	call calc_carry_proc
+
+	mov [si],al
+
+	inc si
+	inc di
+	dec cont2
+
+	jmp mult_loop
+
+	eval_carry:
+
+	cmp carry,00h
+	je end_mult_loop
+
+	;Loop to shift string if there's a carry in the end
+	shift_string:
+
+	mov al,[si]
+
+	cmp al,24h
+	je add_last_carry
+
+	add al,carry
+
+	call calc_carry_proc
+
+	mov [si],al
+
+	inc si
+
+	jmp shift_string
+
+	add_last_carry:
+	cmp carry,00h
+	je end_mult_loop
+
+	mov al,carry
+	mov [si],al
+
+	end_mult_loop:
+	xor ax,ax
+	xor bx,bx
+
+        ret
+        mult_strings endp
+;-----------------------------------------------------------------------
+        num2string proc  near
+
+	mov bl,num
+	lea si,string
+	mov cont,00h
+	mov cont2,00h
+
+        subhundreds:
+
+        cmp bl,64h
+        jl subtens
+
+        sub bl,64h
+
+        inc cont
+
+        cmp bl,09h
+        jle store_num
+
+        jmp subhundreds
+
+        ;Count tens in result if any
+        subtens:
+
+        cmp bl,0Ah
+        jl store_num
+
+        sub bl,0Ah
+
+        inc cont2
+
+        jmp subtens
+
+        store_num:
+	mov [si],bl
+
+	inc si
+	mov al,cont2
+	mov [si],al
+
+	inc si
+	mov al,cont
+	mov [si],al
+
+	xor bx,bx
+	xor ax,ax
+
+        ret
+        num2string endp
+;-----------------------------------------------------------------------
+	dup_string proc near
+
+	lea si,string
+	lea di,aux_string
+
+	copy_string:
+
+	mov bl,[si]
+
+	cmp bl,24h
+	je end_copy
+
+	mov [di],bl
+
+	inc si
+	inc di
+
+	jmp copy_string
+	
+	end_copy:
+	xor bx,bx
+
+	ret
+	dup_string endp
+;-----------------------------------------------------------------------
+        calc_carry_proc proc near
+
+	mov carry,00h
+
+        calc_carry_loop:
+
+        cmp al,0Ah
+        jl end_carry_loop
+
+        sub al,0Ah
+
+        inc carry
+
+        jmp calc_carry_loop
+
+        end_carry_loop:
+
+        ret
+        calc_carry_proc endp
+;-----------------------------------------------------------------------
+        print_factorial proc  near
+
+	call newline
+
+	mov cont,00h
+	lea si,string
+
+	traverse_string:
+
+	mov al,[si]
+	cmp al,24h
+	je print_loop
+
+	inc si
+	inc cont
+
+	jmp traverse_string
+
+	print_loop:
+
+	mov cl,cont
+	dec si
+
+	print_reverse:
+
+	mov cl,cont
+	cmp cl,00h
+	je end_print
+
+	mov al,[si]
+	add al,30h
+
+	mov ah,02h
+	mov dl,al
+	int 21h
+
+	dec cont
+
+	jmp print_reverse
+
+	end_print:
+
+        ret
+        print_factorial endp
+;-----------------------------------------------------------------------
+        newline proc  near
+
+        ;Print new line
+        mov dl,0ah
+        mov ah,02h
+        int 21h
+
+        ret
+        newline endp
+;-----------------------------------------------------------------------
+        store_input proc near
 
         call newline
 
@@ -59,7 +313,7 @@ program:
         cmp al,0Dh              ;Check if is an enter
         jne bridge
 	call print_error
-	jmp finalize
+	jmp return_input
         bridge:
 
         sub al,30h              ;Convert to real number
@@ -67,368 +321,30 @@ program:
 
         ;Store the tens and hundreds if existent
         shl bl,01h              ;Multiply itself by 2
-        mov tmp,bl
+        mov cont2,bl
         mov cl,02h
         shl bl,cl               ;Multiply itself by 4, so by 8 in total
-        add bl,tmp              ;By 10 in total
+        add bl,cont2            ;By 10 in total
         add bl,al
         mov num,bl              ;Store in variable
         inc cont                ;Add 1 to cont
 
         cmp cont,03h            ;Check if 3 digits have been inserted
-        je checknum             ;If yes, go to checknum
+        je return_input         ;If yes, go to checknum
 
-        jmp numtag
-;-----------------------------------------------------------------------
-        ;Check if num is not greater than 128
-        checknum:
+	jmp numtag
 
-        cmp num,80h
-        jna main
-
-	call print_error
-	jmp finalize
-
-	main:
-
-        call factorial          ;If not, call factorial procedure
-
-        call print_factorial    ;Print factorial
-
-        jmp finalize            ;Finalize
-
-;-----------------------------------------------------------------------
-        factorial proc 
-
-        mov cont,00h
-
-        inc cont
-
-        fact_loop:
-
-        mov cl,cont
-        cmp cl,num
-        je end_fact_loop
-
-        mov bl,cont
-
-        call multiply
-
-        inc cont                        ;Add 1 to cont
-
-        jmp fact_loop
-
-        end_fact_loop:
+	return_input:
+	xor ax,ax
+	xor bx,bx
+	xor cx,cx
+	mov cont,00h
+	mov cont2,00h
 
         ret
-        factorial endp
+        store_input endp
 ;-----------------------------------------------------------------------
-        multiply proc 
-
-        call reset_i_proc
-
-        mov units_cont,00h
-        mov tens_cont,00h
-        mov hundreds_cont,00h
-
-        call split_operand
-
-        call mult_units_proc
-
-        call mult_tens_proc
-
-        call mult_hundreds_proc
-
-        call summa_proc
-
-        ret
-        multiply endp
-;-----------------------------------------------------------------------
-        split_operand proc 
-
-        subhundreds:
-
-        cmp bl,64h
-        jl subtens
-
-        sub bl,64h
-
-        inc hundreds_cont
-
-        cmp bl,09h
-        jle store_unit
-
-        jmp subhundreds
-
-        ;Count tens in result if any
-        subtens:
-
-        cmp bl,0Ah
-        jl store_unit
-
-        sub bl,0Ah
-
-        inc tens_cont
-
-        jmp subtens
-
-        store_unit:
-        mov units_cont,bl
-
-        ret
-        split_operand endp
-;-----------------------------------------------------------------------
-        mult_units_proc proc 
-
-        mov si,[res_i]
-        mov di,[units_i]
-
-        ;Multiply units by res_str loop
-        mult_units_loop:
-
-        mov al,res_str[si]                     	;Store first char of res_str in al
-        cmp al,24h                             	;Compare if current char is $
-        je end_units_loop                       ;If yes go to end_units_loop
-
-        mov bl,units_cont                       ;Store units_cont in bl
-
-        mul bl                                  ;Mult al by units_cont
-
-        add al,carry                            ;Add existent carry to al
-
-        call calc_carry_proc                    ;Call calc_carry_proc
-
-	mov cl,remainder
-
-        mov byte ptr[di],cl              	;Store remainder in units_str
-
-        inc di                                  ;Add 1 to di
-        inc si                                  ;Add 1 to si
-
-        jmp mult_units_loop                     ;Iterate again
-
-        end_units_loop:
-        mov remainder,00h
-        mov carry,00h
-        mov byte ptr[di],24h                    ;Truncate units_str with $
-
-        ret
-        mult_units_proc endp
-;-----------------------------------------------------------------------
-        mult_tens_proc proc 
-
-        mov si,[res_i]
-        mov di,[tens_i]
-
-        ;Multiply tens by res_str loop
-        mult_tens_loop:
-
-        mov al,res_str[si]                      ;Store each char of res_str in al
-        cmp al,24h                             	;Compare if current char is $
-        je end_tens_loop                        ;If yes go to end_units_loop
-
-        mov bl,tens_cont                        ;Store units_cont in bl
-
-        mul bl                                  ;Mult al by units_cont
-
-        add al,carry                            ;Add existent carry to al
-
-        call calc_carry_proc                    ;Call calc_carry_proc
-
-	mov cl,remainder
-
-        mov byte ptr[di],cl              	;Store remainder in units_str
-
-        inc di                                  ;Add 1 to di
-        inc si                                  ;Add 1 to si
-
-        jmp mult_tens_loop                      ;Iterate again
-
-        end_tens_loop:
-        mov remainder,00h
-        mov carry,00h
-        mov byte ptr[di],24h                    ;Truncate units_str with $
-
-        ret
-        mult_tens_proc endp
-;-----------------------------------------------------------------------
-        mult_hundreds_proc proc 
-
-        mov si,[res_i]
-        mov di,[hundreds_i]
-
-        ;Multiply hundreds by res_str loop
-        mult_hundreds_loop:
-
-        mov al,res_str[si]                      ;Store each char of res_str in al
-        cmp al,24h                             ;Compare if current char is $
-        je end_hundreds_loop                    ;If yes go to end_units_loop
-
-        mov bl,hundreds_cont                    ;Store units_cont in bl
-
-        mul bl                                  ;Mult al by units_cont
-
-        add al,carry                            ;Add existent carry to al
-
-        call calc_carry_proc                    ;Call calc_carry_proc
-
-	mov cl,remainder
-
-        mov byte ptr[di],cl              	;Store remainder in units_str
-
-
-        inc di                                  ;Add 1 to di
-        inc si                                  ;Add 1 to si
-
-        jmp mult_hundreds_loop                  ;Iterate again
-
-        end_hundreds_loop:
-        mov remainder,00h
-        mov carry,00h
-        mov byte ptr[di],24h                    ;Truncate units_str with $
-
-        ret
-        mult_hundreds_proc endp
-;-----------------------------------------------------------------------
-        calc_carry_proc proc 
-
-        calc_carry_loop:
-
-        cmp al,0Ah
-        jl store_remainder
-
-        sub al,0Ah
-
-        inc carry
-
-        jmp calc_carry_loop
-
-        store_remainder:
-        mov remainder,al
-
-        ret
-        calc_carry_proc endp
-;-----------------------------------------------------------------------
-        summa_proc proc 
-
-        xor al,al
-
-        summa_loop:
-
-        mov si,[units_i]
-
-        mov bl,units_str[si]
-        cmp bl,24h
-        je skip_units                           ;Go to skip_units
-
-        add al,bl
-        inc si
-        mov units_i,si
-
-        ;Skip units if end of units_str
-        skip_units:
-
-        mov si,[tens_i]
-
-        mov bl,tens_str[si]
-        cmp bl,24h
-        je skip_tens
-
-        add al,bl
-        inc si
-        mov tens_i,si
-
-        skip_tens:
-
-        mov si,[hundreds_i]
-
-        mov bl,hundreds_str[si]
-        cmp bl,24h
-        je end_summa_loop
-
-        add al,bl
-        inc si
-        mov hundreds_i,si
-
-        add al,carry
-
-        call calc_carry_proc
-
-        mov si,[res_i]
-        mov byte ptr[si],al
-        inc si
-        mov res_i,si
-
-        jmp summa_loop
-
-        end_summa_loop:
-        mov si,[res_i]
-        mov byte ptr[si],24h                    ;Truncate res_str with $
-
-        ret
-        summa_proc endp
-;-----------------------------------------------------------------------
-        reset_i_proc proc 
-
-        ;Store initial addresses of strings
-        lea si,units_str
-        mov units_i,si
-
-        lea si,tens_str
-        inc si
-        mov tens_i,si
-
-        lea si,hundreds_str
-        inc si
-        inc si
-        mov hundreds_i,si
-
-        lea si,res_str
-        mov res_i,si
-
-        ret
-        reset_i_proc endp
-;-----------------------------------------------------------------------
-        print_factorial proc 
-
-	call newline
-
-	mov dl,units_cont
-	mov ah,02h
-	int 21h
-
-	call newline
-
-	mov dl,tens_cont
-	mov ah,02h
-	int 21h
-
-	call newline
-
-	mov dl,tens_cont
-	mov ah,02h
-	int 21h
-
-	call newline
-
-        mov dx, offset res_str
-        mov ah,09h
-        int 21h
-
-        ret
-        print_factorial endp
-;-----------------------------------------------------------------------
-        newline proc 
-
-        ;Print new line
-        mov dl,0ah
-        mov ah,02h
-        int 21h
-
-        ret
-        newline endp
-;-----------------------------------------------------------------------
-        print_error proc 
+        print_error proc near
 
 	call newline
 
@@ -439,8 +355,4 @@ program:
         ret
         print_error endp
 ;-----------------------------------------------------------------------
-        ;Finalize program
-        finalize:
-        mov ah,4Ch
-        int 21h
 END program
