@@ -3,18 +3,18 @@
         notification db 'Insert a 3 digit number no greater than 128$'
         inputerror_message db 'ERROR: Invalid input$'
 
-	string db 300 dup ('$')
+        string db 500 dup ('$')
 
-	aux_string db 300 dup ('$')
-
-        carry db 00h
+        carry dw 00h
 
         ;Input num
         num db 00h
 
         ;Aux variables
         cont db 00h
-        cont2 db 00h
+
+        ;Flag for 127 and 128 fact
+        flag db 00h
 
 .stack
 .code
@@ -23,268 +23,222 @@ program:
         mov ds,ax
         xor ax,ax
         xor bx,bx
-;-----------------------------------------------------------------------
-	call store_input
+;------------------------------------------------------------------
+        call store_input
 
-        ;Check if num is not greater than 128
-        checknum:
+        xor ax,ax
 
-	xor ax,ax
-
-	mov al,num
+        mov al,num
         cmp ax,80h
         jg error
 
-        call factorial          	;Call factorial procedure
+        call factorial_proc             ;Call factorial procedure
 
-        call print_factorial    	;Print factorial
+        call print_fact                 ;Print factorial
 
-	jmp finalize
+        jmp finalize
 
-	error:
-	call print_error
+        error:
+        call print_error
 
         ;Finalize program
         finalize:
         mov ah,4Ch
         int 21h
-;-----------------------------------------------------------------------
-        factorial proc  near
+;------------------------------------------------------------------
+        factorial_proc proc near
 
-	call num2string 		;Proc to convert input num to string
-	call dup_string 		;Proc to duplicate string
+        ;Store a 1 in string
+        xor ax,ax
+        xor bx,bx
+        lea si, string
+        mov al,01h
+        mov [si],al
+        mov cont,02h
 
-        fact_loop:
+        mov al,num
+        cmp ax,7Eh
+        jng factorial_loop
 
-	cmp num,00h
-        je end_fact_loop
+        inc flag
+        dec num
 
-	dec num
+        cmp ax,7Fh
+        je factorial_loop
 
-	call mult_strings
+        inc flag
+        dec num
 
-	call dup_string
+        ;Main factorial loop
+        factorial_loop:
 
-        jmp fact_loop
+        xor ax,ax
+        xor bx,bx
+
+        ;Check if cont is not greater than num
+        mov al,cont
+        mov bl,num
+        cmp bl,al
+        jl end_fact_loop
+
+        call multiply_proc              ;Call multiply_proc
+
+        inc cont                        ;Add 1 to var
+
+        jmp factorial_loop
 
         end_fact_loop:
 
-        ret
-        factorial endp
-;-----------------------------------------------------------------------
-        mult_strings proc  near
+        xor ax,ax
+        xor bx,bx
 
-	xor cx,cx
-	xor ax,ax
-	xor bx,bx
-	mov al,num
-	mov cont2,al
-	mov carry,00h
-	xor ax,ax
+        mov al,flag
+        cmp al,00h
+        je return_fact
 
-	lea si,string
-	lea di,aux_string
+        mov cont,7Fh
+        call multiply_proc
 
-	;Multiply strings loop
-	mult_loop:
+        xor ax,ax
+        mov al,flag
+        cmp al,02h
+        jne return_fact
 
-	mov cl,cont2
-	cmp cl,00h
-	je eval_carry
+        mov cont,80h
+        call multiply_proc
 
-	mov al,[si]
-	mov bl,[di]
-
-	add al,bl
-	add al,carry
-
-	call calc_carry_proc
-
-	mov [si],al
-
-	inc si
-	inc di
-	dec cont2
-
-	jmp mult_loop
-
-	eval_carry:
-
-	cmp carry,00h
-	je end_mult_loop
-
-	;Loop to shift string if there's a carry in the end
-	shift_string:
-
-	mov al,[si]
-
-	cmp al,24h
-	je add_last_carry
-
-	add al,carry
-
-	call calc_carry_proc
-
-	mov [si],al
-
-	inc si
-
-	jmp shift_string
-
-	add_last_carry:
-	cmp carry,00h
-	je end_mult_loop
-
-	mov al,carry
-	mov [si],al
-
-	end_mult_loop:
-	xor ax,ax
-	xor bx,bx
+        return_fact:
 
         ret
-        mult_strings endp
-;-----------------------------------------------------------------------
-        num2string proc  near
+        factorial_proc endp
+;------------------------------------------------------------------
+        multiply_proc proc near
 
-	mov bl,num
-	lea si,string
-	mov cont,00h
-	mov cont2,00h
+        lea si,string
+        mov carry,00h
 
-        subhundreds:
+        ;Main multiply_loop
+        multiply_loop:
 
-        cmp bl,64h
-        jl subtens
+        xor ax,ax
+        xor bx,bx
 
-        sub bl,64h
+        ;Check if i is not $
+        mov al,[si]
+        cmp al,24h
+        je shift_string
 
+        mov bl,cont
+        ;mul bl
+        mul bx
+        add ax,carry
+
+        xor bx,bx
+        xor dx,dx
+        mov bx,0Ah
+
+        div bx
+        mov carry,ax
+
+        mov [si],dl
+
+        inc si
+
+        jmp multiply_loop
+
+        ;Shift string if carry is not 0
+        shift_string:
+
+        xor ax,ax
+        mov ax,carry
+        cmp ax,00h
+        ;cmp al,00h
+        je end_mult
+
+        xor bx,bx
+        xor dx,dx
+        xor ax,ax
+
+        mov ax,carry
+
+        mov bx,0Ah
+        div bx
+
+        mov carry,ax
+
+        mov [si],dl
+
+        inc si
+
+        jmp shift_string
+
+        end_mult:
+
+        ret
+        multiply_proc endp
+;------------------------------------------------------------------
+        carry_proc proc near
+
+        mov carry,00h
+        xor bx,bx
+        xor dx,dx
+        mov bx,0Ah
+
+        div bx
+        mov carry,ax
+
+        ret
+        carry_proc endp
+;------------------------------------------------------------------
+        print_fact proc near
+
+        call newline
+
+        mov cont,00h
+        lea si,string
+
+        ;Go to last char of string
+        traverse_string:
+
+        xor ax,ax
+
+        mov al,[si]
+        cmp al,24h
+        je print_loop
+
+        inc si
         inc cont
 
-        cmp bl,09h
-        jle store_num
+        jmp traverse_string
 
-        jmp subhundreds
+        print_loop:
 
-        ;Count tens in result if any
-        subtens:
+        xor bx,bx
+        dec si
 
-        cmp bl,0Ah
-        jl store_num
+        print_reverse:
 
-        sub bl,0Ah
+        xor ax,ax
 
-        inc cont2
+        mov bl,cont
+        cmp bl,00h
+        je end_print
 
-        jmp subtens
+        mov ah,02h
+        mov dl,[si]
+        add dl,30h
+        int 21h
 
-        store_num:
-	mov [si],bl
+        dec cont
+        dec si
 
-	inc si
-	mov al,cont2
-	mov [si],al
+        jmp print_reverse
 
-	inc si
-	mov al,cont
-	mov [si],al
-
-	xor bx,bx
-	xor ax,ax
+        end_print:
 
         ret
-        num2string endp
-;-----------------------------------------------------------------------
-	dup_string proc near
-
-	lea si,string
-	lea di,aux_string
-
-	copy_string:
-
-	mov bl,[si]
-
-	cmp bl,24h
-	je end_copy
-
-	mov [di],bl
-
-	inc si
-	inc di
-
-	jmp copy_string
-	
-	end_copy:
-	xor bx,bx
-
-	ret
-	dup_string endp
-;-----------------------------------------------------------------------
-        calc_carry_proc proc near
-
-	mov carry,00h
-
-        calc_carry_loop:
-
-        cmp al,0Ah
-        jl end_carry_loop
-
-        sub al,0Ah
-
-        inc carry
-
-        jmp calc_carry_loop
-
-        end_carry_loop:
-
-        ret
-        calc_carry_proc endp
-;-----------------------------------------------------------------------
-        print_factorial proc  near
-
-	call newline
-
-	mov cont,00h
-	lea si,string
-
-	traverse_string:
-
-	mov al,[si]
-	cmp al,24h
-	je print_loop
-
-	inc si
-	inc cont
-
-	jmp traverse_string
-
-	print_loop:
-
-	mov cl,cont
-	dec si
-
-	print_reverse:
-
-	mov cl,cont
-	cmp cl,00h
-	je end_print
-
-	mov al,[si]
-	add al,30h
-
-	mov ah,02h
-	mov dl,al
-	int 21h
-
-	dec cont
-
-	jmp print_reverse
-
-	end_print:
-
-        ret
-        print_factorial endp
-;-----------------------------------------------------------------------
+        print_fact endp
+;------------------------------------------------------------------
         newline proc  near
 
         ;Print new line
@@ -294,15 +248,21 @@ program:
 
         ret
         newline endp
-;-----------------------------------------------------------------------
+;------------------------------------------------------------------
         store_input proc near
 
         call newline
+
+        xor ax,ax
+        xor bx,bx
+        xor cx,cx
+        mov cont,00h
 
         ;Ask for the input number
         mov dx, offset notification
         mov ah,09h
         int 21h
+        xor dx,dx
 
         call newline
 
@@ -312,8 +272,8 @@ program:
 
         cmp al,0Dh              ;Check if is an enter
         jne bridge
-	call print_error
-	jmp return_input
+        call print_error
+        jmp return_input
         bridge:
 
         sub al,30h              ;Convert to real number
@@ -321,10 +281,10 @@ program:
 
         ;Store the tens and hundreds if existent
         shl bl,01h              ;Multiply itself by 2
-        mov cont2,bl
+        mov dl,bl
         mov cl,02h
         shl bl,cl               ;Multiply itself by 4, so by 8 in total
-        add bl,cont2            ;By 10 in total
+        add bl,dl               ;By 10 in total
         add bl,al
         mov num,bl              ;Store in variable
         inc cont                ;Add 1 to cont
@@ -332,21 +292,16 @@ program:
         cmp cont,03h            ;Check if 3 digits have been inserted
         je return_input         ;If yes, go to checknum
 
-	jmp numtag
+        jmp numtag
 
-	return_input:
-	xor ax,ax
-	xor bx,bx
-	xor cx,cx
-	mov cont,00h
-	mov cont2,00h
+        return_input:
 
         ret
         store_input endp
-;-----------------------------------------------------------------------
+;------------------------------------------------------------------
         print_error proc near
 
-	call newline
+        call newline
 
         mov dx,offset inputerror_message
         mov ah,09h
@@ -354,5 +309,5 @@ program:
 
         ret
         print_error endp
-;-----------------------------------------------------------------------
+;------------------------------------------------------------------
 END program
