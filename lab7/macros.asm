@@ -20,37 +20,24 @@ sqr_rect_area macro width_num, height_num, total_num
 	mov total_num,al
 endm
 ;------------------------------------------------
-;Calculate square and rectangle area
-sqr_rect_peri macro w, h, total
+;Calculate square and rectangle perimeter
+sqr_rect_peri macro width_num, height_num, total_num
 	xor bx,bx
-	add bl,w
-	add bl,w
-	add bl,h
-	add bl,h
-	add bl,30h
-	mov total,bl
-endm
-;------------------------------------------------
-;Calculate triangle area
-tri_area macro w, h, total
-	xor ax,ax
-	xor bx,bx
-	mov al,w
-	mul h
-	mov bl,02h
-	div bl
-	add al,30h
-	mov total,al
+	add bl,width_num
+	add bl,height_num
+	shl bl,01h
+	sub bl,90h
+	mov total_num,bl
 endm
 ;------------------------------------------------
 ;Calculate triangle perimeter
-tri_peri macro w, h, l, total
+tri_peri macro width_num, height_num, hypo_num, total_num
 	xor bx,bx
-	add bl,w
-	add bl,h
-	add bl,l
-	add bl,30h
-	mov total,bl
+	add bl,width_num
+	add bl,height_num
+	add bl,hypo_num
+	sub bl,60h
+	mov total_num,bl
 endm
 ;------------------------------------------------
 
@@ -94,18 +81,18 @@ locate PROTO :DWORD,:DWORD
 	width_num 	db 0,0
 	height_num 	db 0,0
 	total_num 	db 0,0
+	opt_num 	db 0,0
+	shp_num 	db 0,0
+	hypo_num 	db 0,0
+	a_num 		db 0,0
+	b_num 		db 0,0
+
+	str1 		dw 100 dup("$")
+	str2 		dw 100 dup("$")
 
 	new_line 	db 0Ah
 	new_space 	db 20h
 
-.data?
-	opt_num 	db 50 dup(?)
-	shp_num 	db 50 dup(?)
-	hypo_num 	db 50 dup(?)
-	a_num 		db 50 dup(?)
-	b_num 		db 50 dup(?)
-	str1 		db 100 dup(?)
-	str2 		db 100 dup(?)
 .const
 
 .code
@@ -171,6 +158,14 @@ shapes_proc proc near
 	write_text input_prompt, new_space
 	read_text opt_num
 
+	xor bx,bx
+	mov bl,opt_num
+
+	cmp bl,32h
+	jg exit_tag
+	cmp bl,31h
+	jl exit_tag
+
 	;Clear screen
 	call clear_screen
 
@@ -184,60 +179,98 @@ shapes_proc proc near
 	write_text input_prompt, new_space
 	read_text shp_num
 
+	xor bx,bx
+	mov bl,shp_num
+
+	cmp bl,33h
+	jg exit_tag
+	cmp bl,31h
+	jl exit_tag
+
 	;Clear screen
 	call clear_screen
 
-	;Output height and width prompt
+	;Output width prompt
 	invoke StdOut, addr new_space
 	write_text width_opt, new_space
 	read_text width_num
-	invoke StdOut, addr new_space
-	write_text height_opt, new_space
-	read_text height_num
+
+	;If square assign width to height
+	xor ax,ax
+	mov al,width_num
+	mov height_num,al
 
 	xor bx,bx
 	mov bl,shp_num
 
 	cmp bl,31h
-	je sqr_tag
+	je trig_tag
+
+	;Output height prompt
+	invoke StdOut, addr new_space
+	write_text height_opt, new_space
+	read_text height_num
 
 	cmp bl,32h
-	je sqr_tag
+	je trig_tag
 
-	cmp bl,33h
-	jne exit_tag
+	xor bx,bx
+	mov bl,opt_num
+
+	cmp bl,31h
+	je trig_tag
 
 	;Output second height
-	invoke StdOut, addr new_line
+	invoke StdOut, addr new_space
 	write_text hyp_opt, new_space
 	read_text hypo_num
+
+	trig_tag:
+
+	xor bx,bx
+	mov bl,opt_num
+
+	cmp bl,31h
+	je area_tag
+	jmp peri_tag
 
 	;Clear screen
 	call clear_screen
 
-	sqr_tag:
-	
-	xor ax,ax
-	mov al,opt_num
-
-	cmp al,31h
-	je area_tag
-
-	cmp al,32h
-	je peri_tag
-
-	jmp exit_tag
-
 	area_tag:
+
 	sqr_rect_area width_num, height_num, total_num
-	write_text total_num, new_line
+
+	cmp bl,33h
+	jne ret_shapes
+
+	xor ax,ax
+	xor bx,bx
+	mov al,total_num
+	sub al,30h
+	mov bl,02h
+	div bl
+	add al,30h
+	mov total_num,al
+
 	jmp ret_shapes
 
 	peri_tag:
+
+	xor bx,bx
+	mov bl,shp_num
+	cmp bl,33h
+	je tri_peri_tag
+
 	sqr_rect_peri width_num, height_num, total_num
-	write_text total_num, new_line
+
+	jmp ret_shapes
+
+	tri_peri_tag:
+	tri_peri width_num, height_num, hypo_num, total_num
 
 	ret_shapes:
+	write_text total_num, new_line
 
 	ret
 shapes_proc endp
