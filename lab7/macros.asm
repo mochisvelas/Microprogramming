@@ -72,6 +72,7 @@ locate PROTO :DWORD,:DWORD
 
 	a_opt 		db "Insert first number:",0
 	b_opt 		db "Insert second number:",0
+	c_opt 		db "Insert third number:",0
 
 	str1_opt 	db "Insert first string:",0
 	str2_opt 	db "Insert second string:",0
@@ -88,6 +89,7 @@ locate PROTO :DWORD,:DWORD
 	hypo_num 	db 0,0
 	a_num 		db 0,0
 	b_num 		db 0,0
+	c_num 		db 0,0
 
 	str1 		dw 100 dup("$")
 	str2 		dw 100 dup("$")
@@ -300,12 +302,107 @@ shapes_proc endp
 ;Procedure to calculate expressions
 expr_proc proc near
 
-	;Ask and read numbers
+	;Ask and read a
 	write_text a_opt, new_space
-	read_text a_num,10
+	read_text a_num
+	sub a_num,30h
+
+	;Check if a is a valid input
+	cmp a_num,09h
+	jg exit_tag
+	cmp a_num,00h
+	jl exit_tag
 	
+	;Ask and read b
 	write_text b_opt, new_space
-	read_text b_num,10
+	read_text b_num
+	sub b_num,30h
+
+	;Check if b is a valid input
+	cmp b_num,09h
+	jg exit_tag
+	cmp b_num,00h
+	jl exit_tag
+
+	;Ask and read c
+	write_text c_opt, new_space
+	read_text c_num
+	sub c_num,30h
+
+	;Check if c is a valid input
+	cmp c_num,09h
+	jg exit_tag
+	cmp c_num,00h
+	jl exit_tag
+
+	xor ax,ax
+	xor bx,bx
+
+	;Expression 2 * b + 3 * (a - c)
+	mov al,02h
+	mul b_num
+	mov total_num,al
+
+	xor ax,ax
+	mov al,03h
+	mov bl,a_num
+	sub bl,c_num
+	mul bl
+	add total_num,al
+	add total_num,30h
+
+	invoke StdOut, addr new_space
+	invoke StdOut, addr new_line
+	write_text result_prompt, new_space
+	write_text total_num, new_line
+
+	;Expression a / b
+	xor ax,ax
+	xor bx,bx
+
+	mov al,a_num
+	mov bl,b_num
+	div bl
+	mov total_num,al
+	add total_num,30h
+
+	write_text result_prompt, new_space
+	write_text total_num, new_line
+
+	;Expression a * b / c
+	xor ax,ax
+	xor bx,bx
+
+	mov al,a_num
+	mov bl,b_num
+	mul bl
+	mov bl,c_num
+	div bl
+	mov total_num,al
+	add total_num,30h
+
+	write_text result_prompt, new_space
+	write_text total_num, new_line
+
+	;Expression a * (b / c)
+	xor ax,ax
+	xor bx,bx
+
+	mov al,b_num
+	mov bl,c_num
+	div bl
+	mov bl,al
+	mov al,a_num
+	div bl
+	mov total_num, al
+	add total_num,30h
+
+	write_text result_prompt, new_space
+	write_text total_num, new_line
+
+	;Finalize expressions
+	read_text opt_num
+	call clear_screen
 
 	ret
 expr_proc endp
@@ -315,14 +412,13 @@ str_proc proc near
 
 	;Ask and read strings
 	write_text str1_opt, new_space
-	read_text str1,10
+	read_text str1
 	
 	write_text str2_opt, new_space
-	read_text str2,10
+	read_text str2
 	
 	ret
 str_proc endp
-
 ;------------------------------------------------
 ;Procedure to clear screen found in m32lib
 clear_screen proc
