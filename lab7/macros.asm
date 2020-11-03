@@ -1,3 +1,15 @@
+;Print text
+write_text macro text, white_space
+	invoke StdOut, addr text
+	invoke StdOut, addr white_space
+endm
+;------------------------------------------------
+;Read text
+read_text macro text
+	invoke StdIn, addr opt_num,10
+endm
+;------------------------------------------------
+
 .386
 .model flat,stdcall
 
@@ -22,15 +34,16 @@ INCLUDE \masm32\include\kernel32.inc
 	rectangle_opt 	db "2. Rectangle",0
 	triangle_opt 	db "3. Triangle",0
 
-	a_opt 		db "Insert first number: ",0
-	b_opt 		db "Insert second number: ",0
+	a_opt 		db "Insert first number:",0
+	b_opt 		db "Insert second number:",0
 
-	str1_opt 	db "Insert first string: ",0
-	str2_opt 	db "Insert second string: ",0
+	str1_opt 	db "Insert first string:",0
+	str2_opt 	db "Insert second string:",0
 
-	input_prompt 	db "Insert option number: ",0
+	input_prompt 	db "Insert option number:",0
 
 	new_line 	db 0Ah
+	new_space 	db 20h
 .data?
 	opt_num 	db 50 dup(?)
 	a_num 		db 50 dup(?)
@@ -42,58 +55,52 @@ INCLUDE \masm32\include\kernel32.inc
 .code
 program:
 	;Output main prompt
-	invoke StdOut, addr main_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr first_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr second_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr third_opt
+	write_text main_opt, new_line
+	write_text first_opt, new_line
+	write_text second_opt, new_line
+	write_text third_opt, new_line
+	
 
 	;Ask and read main option number
-	invoke StdOut, addr input_prompt
-	invoke StdIn, addr opt_num,10
+	write_text input_prompt, new_space
+	read_text opt_num,10
 
 ;------------------------------------------------
 	;Output area or perimeter prompt
-	invoke StdOut, addr area_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr perim_opt
-	invoke StdOut, addr new_line
+	write_text area_opt, new_line
+	write_text perim_opt, new_line
 
 	;Ask and read area or perimeter number
-	invoke StdOut, addr input_prompt
-	invoke StdIn, addr opt_num,10
+	write_text input_prompt, new_space
+	read_text opt_num,10
 
 	;Output shape prompt
-	invoke StdOut, addr square_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr rectangle_opt
-	invoke StdOut, addr new_line
-	invoke StdOut, addr triangle_opt
-	invoke StdOut, addr new_line
+	write_text square_opt, new_line
+	write_text rectangle_opt, new_line
+	write_text triangle_opt, new_line
+	
 
 	;Ask and read shape number
-	invoke StdOut, addr input_prompt
-	invoke StdIn, addr opt_num,10
+	write_text input_prompt, new_space
+	read_text opt_num,10
 
 ;------------------------------------------------
 	;Ask and read numbers
-	invoke StdOut, addr a_opt
-	invoke StdIn, addr a_num,10
-	invoke StdOut, addr new_line
-	invoke StdOut, addr b_opt
-	invoke StdIn, addr b_num,10
-	invoke StdOut, addr new_line
+	write_text a_opt, new_space
+	read_text a_num,10
+	
+	write_text b_opt, new_space
+	read_text b_num,10
+	
 
 ;------------------------------------------------
 	;Ask and read strings
-	invoke StdOut, addr str1_opt
-	invoke StdIn, addr str1,10
-	invoke StdOut, addr new_line
-	invoke StdOut, addr str2_opt
-	invoke StdIn, addr str2,10
-	invoke StdOut, addr new_line
+	write_text str1_opt, new_space
+	read_text str1,10
+	
+	write_text str2_opt, new_space
+	read_text str2,10
+	
 
 ;------------------------------------------------
 	;Exit program
