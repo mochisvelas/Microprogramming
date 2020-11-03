@@ -78,6 +78,8 @@ locate PROTO :DWORD,:DWORD
 
 	input_prompt 	db "Insert option number:",0
 
+	result_prompt 	db "Result:",0
+
 	width_num 	db 0,0
 	height_num 	db 0,0
 	total_num 	db 0,0
@@ -161,6 +163,7 @@ shapes_proc proc near
 	xor bx,bx
 	mov bl,opt_num
 
+	;If not an option exit
 	cmp bl,32h
 	jg exit_tag
 	cmp bl,31h
@@ -182,6 +185,7 @@ shapes_proc proc near
 	xor bx,bx
 	mov bl,shp_num
 
+	;If not an option exit
 	cmp bl,33h
 	jg exit_tag
 	cmp bl,31h
@@ -195,7 +199,7 @@ shapes_proc proc near
 	write_text width_opt, new_space
 	read_text width_num
 
-	;If square assign width to height
+	;Copy width to height in case square
 	xor ax,ax
 	mov al,width_num
 	mov height_num,al
@@ -203,33 +207,38 @@ shapes_proc proc near
 	xor bx,bx
 	mov bl,shp_num
 
+	;If square do not ask height
 	cmp bl,31h
 	je trig_tag
 
-	;Output height prompt
+	;Output height prompt that will overwrite height_num
 	invoke StdOut, addr new_space
 	write_text height_opt, new_space
 	read_text height_num
 
+	;If rectangle do not ask second height
 	cmp bl,32h
 	je trig_tag
 
 	xor bx,bx
 	mov bl,opt_num
 
+	;If area do not ask second height
 	cmp bl,31h
 	je trig_tag
 
-	;Output second height
+	;Output second height if triangle and perimeter
 	invoke StdOut, addr new_space
 	write_text hyp_opt, new_space
 	read_text hypo_num
 
+	;Trigonometric tag to calculate result
 	trig_tag:
 
 	xor bx,bx
 	mov bl,opt_num
 
+	;Jump to area or perimeter
 	cmp bl,31h
 	je area_tag
 	jmp peri_tag
@@ -239,8 +248,10 @@ shapes_proc proc near
 
 	area_tag:
 
+	;Square and rectangle area macro
 	sqr_rect_area width_num, height_num, total_num
 
+	;If triangle div area by 2
 	cmp bl,33h
 	jne ret_shapes
 
@@ -253,24 +264,35 @@ shapes_proc proc near
 	add al,30h
 	mov total_num,al
 
+	;Return result
 	jmp ret_shapes
 
 	peri_tag:
 
+	;If triangle jump to tri_peri_tag
 	xor bx,bx
 	mov bl,shp_num
 	cmp bl,33h
 	je tri_peri_tag
 
+	;Square and rectangle perimeter macro
 	sqr_rect_peri width_num, height_num, total_num
 
+	;Return result
 	jmp ret_shapes
 
 	tri_peri_tag:
+
+	;Triangle perimeter macro
 	tri_peri width_num, height_num, hypo_num, total_num
 
+	;Return result and clear screen
 	ret_shapes:
+	invoke StdOut, addr new_space
+	write_text result_prompt, new_space
 	write_text total_num, new_line
+	read_text opt_num
+	call clear_screen
 
 	ret
 shapes_proc endp
@@ -302,7 +324,7 @@ str_proc proc near
 str_proc endp
 
 ;------------------------------------------------
-;Procedure found in m32lib
+;Procedure to clear screen found in m32lib
 clear_screen proc
 
     LOCAL hOutPut:DWORD
