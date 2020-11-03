@@ -6,16 +6,18 @@ endm
 ;------------------------------------------------
 ;Read text
 read_text macro text
-	invoke StdIn, addr opt_num,10
+	invoke StdIn, addr text,10
 endm
 ;------------------------------------------------
 ;Calculate square and rectangle area
-sqr_rect_area macro w, h, total
+sqr_rect_area macro width_num, height_num, total_num
 	xor ax,ax
-	mov al,w
-	mul h
+	mov al,width_num
+	sub al,30h
+	sub height_num,30h
+	mul height_num
 	add al,30h
-	mov total,al
+	mov total_num,al
 endm
 ;------------------------------------------------
 ;Calculate square and rectangle area
@@ -89,18 +91,19 @@ locate PROTO :DWORD,:DWORD
 
 	input_prompt 	db "Insert option number:",0
 
+	width_num 	db 0,0
+	height_num 	db 0,0
+	total_num 	db 0,0
+
 	new_line 	db 0Ah
 	new_space 	db 20h
 
 .data?
 	opt_num 	db 50 dup(?)
 	shp_num 	db 50 dup(?)
-	width_num 	db 50 dup(?)
-	height_num 	db 50 dup(?)
 	hypo_num 	db 50 dup(?)
 	a_num 		db 50 dup(?)
 	b_num 		db 50 dup(?)
-	total_num 	db 50 dup(?)
 	str1 		db 100 dup(?)
 	str2 		db 100 dup(?)
 .const
@@ -118,13 +121,13 @@ program:
 
 	;Ask and read main option number
 	write_text input_prompt, new_space
-	read_text opt_num,10
-
-	;Clear screen
-	call clear_screen
+	read_text opt_num
 
 	xor bx,bx
 	mov bl,opt_num
+
+	;Clear screen
+	call clear_screen
 
 	;Jump to shapes if option is 1
 	cmp bl,31h
@@ -160,62 +163,81 @@ program:
 shapes_proc proc near
 
 	;Output area or perimeter prompt
+	invoke StdOut, addr new_space
 	write_text area_opt, new_line
 	write_text peri_opt, new_line
 
+	;Ask and read area or perimeter number
+	write_text input_prompt, new_space
+	read_text opt_num
+
+	;Clear screen
+	call clear_screen
+
 	;Output shape prompt
+	invoke StdOut, addr new_space
 	write_text square_opt, new_line
 	write_text rectangle_opt, new_line
 	write_text triangle_opt, new_line
 
 	;Ask and read shape number
 	write_text input_prompt, new_space
-	read_text shp_num,10
+	read_text shp_num
 
-	;Ask and read area or perimeter number
-	write_text input_prompt, new_space
-	read_text opt_num,10
+	;Clear screen
+	call clear_screen
+
+	;Output height and width prompt
+	invoke StdOut, addr new_space
+	write_text width_opt, new_space
+	read_text width_num
+	invoke StdOut, addr new_space
+	write_text height_opt, new_space
+	read_text height_num
 
 	xor bx,bx
 	mov bl,shp_num
 
-	;Output height and width prompt
-	write_text width_opt, new_space
-	read_text width_num,10
-	write_text height_opt, new_space
-	read_text height_num,10
-
-	cmp bl,01h
+	cmp bl,31h
 	je sqr_tag
 
-	cmp bl,02h
+	cmp bl,32h
 	je sqr_tag
 
-	cmp bl,03h
+	cmp bl,33h
 	jne exit_tag
 
 	;Output second height
+	invoke StdOut, addr new_line
 	write_text hyp_opt, new_space
-	read_text hypo_num,10
+	read_text hypo_num
+
+	;Clear screen
+	call clear_screen
 
 	sqr_tag:
 	
 	xor ax,ax
 	mov al,opt_num
 
-	cmp al,01h
+	cmp al,31h
 	je area_tag
 
-	cmp al,02h
+	cmp al,32h
 	je peri_tag
 
 	jmp exit_tag
 
 	area_tag:
-	sqr_rect_area height_num, width_num, total_num
+	sqr_rect_area width_num, height_num, total_num
+	write_text total_num, new_line
+	jmp ret_shapes
 
 	peri_tag:
-	sqr_rect_peri height_num, width_num, total_num
+	sqr_rect_peri width_num, height_num, total_num
+	write_text total_num, new_line
+
+	ret_shapes:
 
 	ret
 shapes_proc endp
