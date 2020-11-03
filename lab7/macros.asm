@@ -84,17 +84,18 @@ locate PROTO :DWORD,:DWORD
 	width_num 	db 0,0
 	height_num 	db 0,0
 	total_num 	db 0,0
-	opt_num 	db 0,0
-	shp_num 	db 0,0
-	hypo_num 	db 0,0
+	opt_num 		db 0,0
+	shp_num 		db 0,0
+	hypo_num 		db 0,0
 	a_num 		db 0,0
 	b_num 		db 0,0
 	c_num 		db 0,0
+	cont 		db 0,0
 
 	str1 		dw 100 dup("$")
 	str2 		dw 100 dup("$")
 
-	new_line 	db 0Ah
+	new_line 		db 0Ah
 	new_space 	db 20h
 
 .const
@@ -410,13 +411,80 @@ expr_proc endp
 ;Procedure to find strings within string
 str_proc proc near
 
-	;Ask and read strings
+	;Ask and read first string
 	write_text str1_opt, new_space
 	read_text str1
 	
+	;Ask and read second string
 	write_text str2_opt, new_space
 	read_text str2
+
+	xor bx,bx
+	mov cont,bl
+
+	;Initialize cursor2
+	lea edi,str2
+
+	;Main loop to traverse and compare strings
+	cmp_loop:
+
+		;Reset cursor1
+		lea esi,str1
+
+		;Move cursor2 to bl
+		mov bl,[edi]
+
+		;If cursor2 is $ finish loop
+		cmp bl,24h
+		je ret_str
+
+		;If cursors are equal jump to sub_str
+		cmp bl,[esi]
+		je sub_str
+
+		;Increment cursors
+		inc esi
+		inc edi
+
+	;Return to main loop
+	jmp cmp_loop
+
+	;Sub loop to compare str1 in sub_str
+	sub_str:
+
+		;Compare cursors
+		mov bl,[edi]
+		cmp bl,[esi]
+		jne cmp_loop
+
+		;Increment  cursor1
+		inc esi
+		mov bl,[esi]
+
+		;If cursor1 is $ finish and inc_cont
+		cmp bl,24h
+		jne inc_cont
+
+		;Increment cursor2
+		inc edi
+
+	;Return to sub loop
+	jmp sub_str
+
+	;Increment cont
+	inc_cont:
+	inc cont
+
+	;Return to main loop
+	jmp cmp_loop
 	
+	;Return cont
+	ret_str:
+	write_text result_prompt, new_space
+	write_text cont, new_line
+	read_text opt_num
+	call clear_screen
+
 	ret
 str_proc endp
 ;------------------------------------------------
