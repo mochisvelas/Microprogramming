@@ -54,13 +54,13 @@ INCLUDE \masm32\include\kernel32.inc
 locate PROTO :DWORD,:DWORD
 
 .data
-	main_opt 		db "-- Main menu --",0
+	main_opt 	db "-- Main menu --",0
 	first_opt 	db "1. Area and perimeter",0
 	second_opt 	db "2. Calculate expressions",0
 	third_opt 	db "3. Count strings",0
 
-	area_opt 		db "1. Area",0
-	peri_opt 		db "2. Perimeter",0
+	area_opt 	db "1. Area",0
+	peri_opt 	db "2. Perimeter",0
 
 	square_opt 	db "1. Square",0
 	rectangle_opt 	db "2. Rectangle",0
@@ -68,14 +68,14 @@ locate PROTO :DWORD,:DWORD
 
 	width_opt 	db "Insert width:",0
 	height_opt 	db "Insert height:",0
-	hyp_opt 		db "Insert second height:",0
+	hyp_opt 	db "Insert second height:",0
 
 	a_opt 		db "Insert first number:",0
 	b_opt 		db "Insert second number:",0
 	c_opt 		db "Insert third number:",0
 
-	str1_opt 		db "Insert first string:",0
-	str2_opt 		db "Insert second string:",0
+	str1_opt 	db "Insert first string:",0
+	str2_opt 	db "Insert second string:",0
 
 	input_prompt 	db "Insert option number:",0
 
@@ -87,15 +87,15 @@ locate PROTO :DWORD,:DWORD
 	width_num 	db 0,0
 	height_num 	db 0,0
 	total_num 	db 0,0
-	opt_num 		db 0,0
-	shp_num 		db 0,0
-	hypo_num 		db 0,0
+	opt_num 	db 0,0
+	shp_num 	db 0,0
+	hypo_num 	db 0,0
 	a_num 		db 0,0
 	b_num 		db 0,0
 	c_num 		db 0,0
 	cont 		db 0,0
 
-	new_line 		db 0Ah
+	new_line 	db 0Ah
 	new_space 	db 20h
 
 .const
