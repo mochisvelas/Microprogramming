@@ -16,17 +16,17 @@ sqr_rect_area macro width_num, height_num, total_num
 	sub al,30h
 	sub height_num,30h
 	mul height_num
-	add al,30h
 	mov total_num,al
 endm
 ;------------------------------------------------
 ;Calculate square and rectangle perimeter
 sqr_rect_peri macro width_num, height_num, total_num
 	xor bx,bx
+	sub width_num,30h
+	sub height_num,30h
 	add bl,width_num
 	add bl,height_num
 	shl bl,01h
-	sub bl,90h
 	mov total_num,bl
 endm
 ;------------------------------------------------
@@ -36,7 +36,7 @@ tri_peri macro width_num, height_num, hypo_num, total_num
 	add bl,width_num
 	add bl,height_num
 	add bl,hypo_num
-	sub bl,60h
+	sub bl,90h
 	mov total_num,bl
 endm
 ;------------------------------------------------
@@ -54,13 +54,13 @@ INCLUDE \masm32\include\kernel32.inc
 locate PROTO :DWORD,:DWORD
 
 .data
-	main_opt 	db "-- Main menu --",0
+	main_opt 		db "-- Main menu --",0
 	first_opt 	db "1. Area and perimeter",0
 	second_opt 	db "2. Calculate expressions",0
 	third_opt 	db "3. Count strings",0
 
-	area_opt 	db "1. Area",0
-	peri_opt 	db "2. Perimeter",0
+	area_opt 		db "1. Area",0
+	peri_opt 		db "2. Perimeter",0
 
 	square_opt 	db "1. Square",0
 	rectangle_opt 	db "2. Rectangle",0
@@ -68,18 +68,21 @@ locate PROTO :DWORD,:DWORD
 
 	width_opt 	db "Insert width:",0
 	height_opt 	db "Insert height:",0
-	hyp_opt 	db "Insert second height:",0
+	hyp_opt 		db "Insert second height:",0
 
 	a_opt 		db "Insert first number:",0
 	b_opt 		db "Insert second number:",0
 	c_opt 		db "Insert third number:",0
 
-	str1_opt 	db "Insert first string:",0
-	str2_opt 	db "Insert second string:",0
+	str1_opt 		db "Insert first string:",0
+	str2_opt 		db "Insert second string:",0
 
 	input_prompt 	db "Insert option number:",0
 
 	result_prompt 	db "Result:",0
+
+	str1 		dw 500 dup("$")
+	str2 		dw 500 dup("$")
 
 	width_num 	db 0,0
 	height_num 	db 0,0
@@ -91,9 +94,6 @@ locate PROTO :DWORD,:DWORD
 	b_num 		db 0,0
 	c_num 		db 0,0
 	cont 		db 0,0
-
-	str1 		dw 100 dup("$")
-	str2 		dw 100 dup("$")
 
 	new_line 		db 0Ah
 	new_space 	db 20h
@@ -255,16 +255,16 @@ shapes_proc proc near
 	sqr_rect_area width_num, height_num, total_num
 
 	;If triangle div area by 2
+	mov bl,shp_num
 	cmp bl,33h
 	jne ret_shapes
 
 	xor ax,ax
 	xor bx,bx
 	mov al,total_num
-	sub al,30h
 	mov bl,02h
+
 	div bl
-	add al,30h
 	mov total_num,al
 
 	;Return result
@@ -293,9 +293,13 @@ shapes_proc proc near
 	ret_shapes:
 	invoke StdOut, addr new_space
 	write_text result_prompt, new_space
-	write_text total_num, new_line
+	xor bx,bx
+	mov bl,total_num
+	call print_res
 	read_text opt_num
 	call clear_screen
+
+	ret_expr:
 
 	ret
 shapes_proc endp
@@ -350,12 +354,20 @@ expr_proc proc near
 	sub bl,c_num
 	mul bl
 	add total_num,al
-	add total_num,30h
 
 	invoke StdOut, addr new_space
 	invoke StdOut, addr new_line
 	write_text result_prompt, new_space
-	write_text total_num, new_line
+	xor bx,bx
+	mov bl,total_num
+	;Avoid negative number
+	cmp bl,00h
+	jnl no_neg1
+
+	xor bx,bx
+
+	no_neg1:
+	call print_res
 
 	;Expression a / b
 	xor ax,ax
@@ -363,12 +375,28 @@ expr_proc proc near
 
 	mov al,a_num
 	mov bl,b_num
+
+	;Avoid division by zero
+	cmp bl,00h
+	je third_expr
+
 	div bl
 	mov total_num,al
-	add total_num,30h
 
 	write_text result_prompt, new_space
-	write_text total_num, new_line
+	xor bx,bx
+	mov bl,total_num
+
+	;Avoid negative number
+	cmp bl,00h
+	jnl no_neg2
+
+	xor bx,bx
+
+	no_neg2:
+	call print_res
+
+	third_expr:
 
 	;Expression a * b / c
 	xor ax,ax
@@ -378,12 +406,27 @@ expr_proc proc near
 	mov bl,b_num
 	mul bl
 	mov bl,c_num
+
+	;Avoid division by zero
+	cmp bl,00h
+	je fourth_expr
+
 	div bl
 	mov total_num,al
-	add total_num,30h
 
 	write_text result_prompt, new_space
-	write_text total_num, new_line
+	xor bx,bx
+	mov bl,total_num
+	;Avoid negative number
+	cmp bl,00h
+	jnl no_neg3
+
+	xor bx,bx
+
+	no_neg3:
+	call print_res
+
+	fourth_expr:
 
 	;Expression a * (b / c)
 	xor ax,ax
@@ -391,15 +434,30 @@ expr_proc proc near
 
 	mov al,b_num
 	mov bl,c_num
+
+	;Avoid division by zero
+	cmp bl,00h
+	je ret_expr
+
 	div bl
 	mov bl,al
 	mov al,a_num
-	div bl
+	mul bl
 	mov total_num, al
-	add total_num,30h
 
 	write_text result_prompt, new_space
-	write_text total_num, new_line
+	xor bx,bx
+	mov bl,total_num
+	;Avoid negative number
+	cmp bl,00h
+	jnl no_neg4
+
+	xor bx,bx
+
+	no_neg4:
+	call print_res
+
+	ret_expr:
 
 	;Finalize expressions
 	read_text opt_num
@@ -413,11 +471,11 @@ str_proc proc near
 
 	;Ask and read first string
 	write_text str1_opt, new_space
-	read_text str1
+	invoke StdIn, addr str1, 499
 	
 	;Ask and read second string
 	write_text str2_opt, new_space
-	read_text str2
+	invoke StdIn, addr str2, 499
 
 	xor bx,bx
 	mov cont,bl
@@ -431,19 +489,20 @@ str_proc proc near
 		;Reset cursor1
 		lea esi,str1
 
-		;Move cursor2 to bl
-		mov bl,[edi]
+		mov bl,00h
 
 		;If cursor2 is $ finish loop
-		cmp bl,24h
+		cmp [edi],bl
 		je ret_str
 
+		;Move cursor1 to bl
+		mov bl,[esi]
+
 		;If cursors are equal jump to sub_str
-		cmp bl,[esi]
+		cmp bl,[edi]
 		je sub_str
 
 		;Increment cursors
-		inc esi
 		inc edi
 
 	;Return to main loop
@@ -452,18 +511,18 @@ str_proc proc near
 	;Sub loop to compare str1 in sub_str
 	sub_str:
 
+		;If cursor1 is $ finish and inc_cont
+		mov bl,00h
+		cmp [esi],bl
+		je inc_cont
+
 		;Compare cursors
 		mov bl,[edi]
 		cmp bl,[esi]
 		jne cmp_loop
 
-		;Increment  cursor1
+		;Increment cursor1
 		inc esi
-		mov bl,[esi]
-
-		;If cursor1 is $ finish and inc_cont
-		cmp bl,24h
-		jne inc_cont
 
 		;Increment cursor2
 		inc edi
@@ -481,12 +540,65 @@ str_proc proc near
 	;Return cont
 	ret_str:
 	write_text result_prompt, new_space
-	write_text cont, new_line
+	xor bx,bx
+	mov bl,cont
+	call print_res
 	read_text opt_num
 	call clear_screen
 
 	ret
 str_proc endp
+;------------------------------------------------
+print_res proc near
+
+	;If single digit go to print single
+	cmp bl,09h
+	jle printsingle
+
+	;Reset cont
+	mov cont,00h 		
+
+	;If is not a single digit go to subthousands
+	jmp subtens 	
+
+	;Print single number
+	printsingle:
+
+	;Print digit
+	mov opt_num,bl
+	add opt_num,30h
+	write_text opt_num, new_line
+
+	jmp ret_print 		
+
+	;Count tens in result if any
+	subtens:
+
+	cmp bl,0Ah
+	jl printcont
+
+	sub bl,0Ah
+
+	inc cont
+
+	jmp subtens
+
+	;Print number
+	printcont:
+
+	;Print tens
+	add cont,30h
+	invoke StdOut, addr cont
+
+	;Print units
+	mov opt_num,bl
+	add opt_num,30h
+	write_text opt_num, new_line
+
+	ret_print:
+
+	ret
+print_res endp
 ;------------------------------------------------
 ;Procedure to clear screen found in m32lib
 clear_screen proc
