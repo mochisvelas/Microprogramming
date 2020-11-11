@@ -18,7 +18,7 @@ endm
 ;Map positions in matrix
 mapping macro i, j, rows, columns, size
 	mov al,i
-	mov bl,rows
+	mov bl,columns
 	mul bl
 	mov bl,size
 	mul bl
@@ -59,6 +59,8 @@ locate PROTO :DWORD,:DWORD
 
 	units 		db 0,0
 	tens 		db 0,0
+
+	matrix 		db 100 dup('$')
 
 	new_line 	db 0Ah
 	new_space 	db 20h
@@ -138,6 +140,7 @@ main_proc endp
 ;Procedure to fill matrix
 fill_matrix proc near
 
+	lea esi,matrix
 	mov i,00h
 
 	loop_rows:
@@ -147,7 +150,7 @@ fill_matrix proc near
 
 		loop_columns:
 
-			mapping i, j, rows, columns, 01h
+			mapping i, j, rows, columns, 02h
 			mov bl,al
 			call print_num
 			invoke StdOut, addr new_space
@@ -164,6 +167,11 @@ fill_matrix proc near
 
 	ret
 fill_matrix endp
+;------------------------------------------------
+inc_cursor proc near
+
+	ret
+inc_cursor endp
 ;------------------------------------------------
 print_num proc near
 
