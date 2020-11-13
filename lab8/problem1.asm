@@ -60,7 +60,7 @@ locate PROTO :DWORD,:DWORD
 	units 		db 0,0
 	tens 		db 0,0
 
-	matrix 		db 100 dup('$')
+	matrix 		db 200 dup('$')
 
 	new_line 	db 0Ah
 	new_space 	db 20h
@@ -90,35 +90,49 @@ main_proc proc near
 	write_text rows_opt, new_space
 	read_text rows
 
-	sub rows,30h
-
 	mov al,rows
+
+	;Exit if nothing inserted
+	cmp al,00h
+	je tag_exit
+
+	sub al,30h
 
 	;Exit if greater than 9
 	cmp al,09h
 	jg tag_exit
+
+	mov rows,al
 
 	;Ask and read columns
 	invoke StdOut, addr new_space
 	write_text columns_opt, new_space
 	read_text columns
 
-	sub columns,30h
-
 	mov bl,columns
+
+	;Exit if nothing inserted
+	cmp bl,00h
+	je tag_exit
+
+	sub bl,30h
 
 	;Exit if greater than 9
 	cmp bl,09h
 	jg tag_exit
 
+	mov columns,bl
+
 	xor ax,ax
 	xor bx,bx
 
+	;Calculate matrix size
 	mov al,rows
 	mov bl,columns
 
 	mul bl
 
+	;Store and write size in cont
 	mov cont,al
 
 	invoke StdOut, addr new_space
@@ -129,6 +143,9 @@ main_proc proc near
 
 	;Call fill_matrix procedure
 	call fill_matrix
+
+	;Call print_matrix procedure
+	call print_matrix
 	read_text cont
 
 	;Clear screen
@@ -140,20 +157,22 @@ main_proc endp
 ;Procedure to fill matrix
 fill_matrix proc near
 
-	lea esi,matrix
 	mov i,00h
+	mov cont,00h
 
 	loop_rows:
 
 		mov j,00h
-		invoke StdOut, addr new_line
 
 		loop_columns:
 
+			lea esi,matrix
+			xor eax,eax
 			mapping i, j, rows, columns, 02h
-			mov bl,al
-			call print_num
-			invoke StdOut, addr new_space
+			add esi,eax
+			mov bl,cont
+			call write_matrix
+			inc cont
 
 			inc j
 			mov cl,j
@@ -168,19 +187,14 @@ fill_matrix proc near
 	ret
 fill_matrix endp
 ;------------------------------------------------
-inc_cursor proc near
+;Procedure to write current position to matrix
+write_matrix proc near
 
-	ret
-inc_cursor endp
-;------------------------------------------------
-print_num proc near
-
-	;Reset tens
 	mov tens,00h 		
 
-	;If single digit printcont
+	;If single digit printnum
 	cmp bl,09h
-	jle printcont
+	jle printnum
 
 
 	;If is not a single digit sub tens
@@ -190,7 +204,7 @@ print_num proc near
 	subtens:
 
 	cmp bl,0Ah
-	jl printcont
+	jl printnum
 
 	sub bl,0Ah
 
@@ -198,19 +212,104 @@ print_num proc near
 
 	jmp subtens
 
-	;Print number
-	printcont:
+	;Write number
+	printnum:
 
-	;Print tens
-	write_num tens
+	;Write tens
+	xor ecx,ecx
+	mov cl,tens
+	mov [esi],ecx
 
-	;Print units
-	mov units,bl
-	write_num units
+	;Write units
+	mov cl,bl
+	inc esi
+	mov [esi],ecx
 
 	ret_print:
 
 	ret
+write_matrix endp
+;------------------------------------------------
+;Procedure to print number
+print_matrix proc near
+
+	mov i,00h
+
+	i_pmatrix:
+
+		mov j,00h
+		invoke StdOut, addr new_line
+
+		j_pmatrix:
+
+		   lea esi,matrix
+		   mapping i, j, rows, columns, 02h
+		   add esi,eax
+
+		   mov bl,[esi]
+		   mov tens,bl
+		   write_num tens
+
+		   inc esi
+		   mov bl,[esi]
+		   mov units,bl
+		   write_num units
+
+		   invoke StdOut, addr new_space
+
+		   inc j
+		   mov cl,j
+		   cmp cl,columns
+
+		jl j_pmatrix
+
+		   inc i
+		   mov cl,i
+		   cmp cl,rows
+
+	jl i_pmatrix
+
+	ret
+print_matrix endp
+;------------------------------------------------
+;Procedure to print number
+print_num proc near
+
+        ;Reset tens
+        mov tens,00h
+
+        ;If single digit printcont
+        cmp bl,09h
+        jle printcont
+
+        ;If is not a single digit sub tens
+        jmp subtens
+
+        ;Count tens in result if any
+        subtens:
+
+        cmp bl,0Ah
+        jl printcont
+
+        sub bl,0Ah
+
+        inc tens
+
+        jmp subtens
+
+        ;Print number
+        printcont:
+
+        ;Print tens
+        write_num tens
+
+        ;Print units
+        mov units,bl
+        write_num units
+
+        ret_print:
+
+        ret
 print_num endp
 ;------------------------------------------------
 ;Procedure to clear screen found in masm32\m32lib\clearscr.asm
