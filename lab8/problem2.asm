@@ -211,7 +211,6 @@ order_matrix proc near
 
 		mov cursor,al
 		lea esi,matrix
-		;lea edi,matrix_2
 		lea edi,matrix
 		inc edi
 
