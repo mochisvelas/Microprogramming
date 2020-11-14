@@ -52,8 +52,8 @@ locate PROTO :DWORD,:DWORD
 
 	cell_prompt 	db "Insert number:",0
 
-	i 			db 0,0
-	j 			db 0,0
+	i 		db 0,0
+	j 		db 0,0
 	rows 		db 0,0
 	columns 	db 0,0
 	matrix 		db 200 dup('$')
