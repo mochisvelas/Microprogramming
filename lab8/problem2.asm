@@ -50,17 +50,23 @@ locate PROTO :DWORD,:DWORD
 
 	result_prompt 	db "Matrix size:",0
 
+	cell_prompt 	db "Insert number:",0
+
 	i 			db 0,0
 	j 			db 0,0
 	rows 		db 0,0
 	columns 	db 0,0
+	matrix 		db 200 dup('$')
 
 	cont 		db 0,0
+	matrix_size 	db 0,0
+
+	cursor 		db 0,0
 
 	units 		db 0,0
 	tens 		db 0,0
 
-	matrix 		db 200 dup('$')
+	cell 		db 0,0
 
 	new_line 	db 0Ah
 	new_space 	db 20h
@@ -138,11 +144,14 @@ main_proc proc near
 	invoke StdOut, addr new_space
 	write_text result_prompt,new_space
 	mov bl,cont
+	mov matrix_size,bl
 	call print_num
 	read_text cont
 
 	;Call fill_matrix procedure
 	call fill_matrix
+
+	call order_matrix
 
 	;Call print_matrix procedure
 	call print_matrix
@@ -157,78 +166,84 @@ main_proc endp
 ;Procedure to fill matrix
 fill_matrix proc near
 
-	mov i,00h
 	mov cont,00h
+	lea esi,matrix
 
-	loop_rows:
+	l_fill:
+		mov cl,cont
+		cmp cl,matrix_size
+		je ret_fill
 
-		mov j,00h
+		write_text cell_prompt,new_space
+		read_text cell
+		sub cell,30h
 
-		loop_columns:
+	  	xor ebx,ebx
+	  	mov bl,cell
+	  	mov [esi],ebx
 
-			lea esi,matrix
-			xor eax,eax
-			mapping i, j, rows, columns, 02h
-			add esi,eax
-			mov bl,cont
-			call write_matrix
-			inc cont
+		inc esi
+		inc cont
 
-			inc j
-			mov cl,j
-			cmp cl,columns
-			jl loop_columns
+	jmp l_fill
 
-			inc i
-			mov cl,i
-			cmp cl,rows
-			jl loop_rows
+	ret_fill:
 
 	ret
 fill_matrix endp
 ;------------------------------------------------
-;Procedure to write current position to matrix
-write_matrix proc near
+;Procedure to order matrix
+order_matrix proc near
+	
+	xor ax,ax
+	xor bx,bx
+	xor cx,cx
+	mov i,00h
+	mov j,00h
+	mov bl,matrix_size
+	mov cont,bl
 
-	mov tens,00h 		
+	i_order:
 
-	;If single digit printnum
-	cmp bl,09h
-	jle printnum
+		mov al,cont
+		sub al,i
+		dec al
 
+		mov cursor,al
+		lea esi,matrix
+		;lea edi,matrix_2
+		lea edi,matrix
+		inc edi
 
-	;If is not a single digit sub tens
-	jmp subtens 	
+		mov j,00h
 
-	;Count tens in result if any
-	subtens:
+		j_order:
+			
+			mov bl,[esi]
+			cmp bl,[edi]
+			jng no_swap
 
-	cmp bl,0Ah
-	jl printnum
+			mov al,[edi]
+			mov [esi],al
+			mov [edi],bl
 
-	sub bl,0Ah
+			no_swap:
 
-	inc tens
+			inc esi
+			inc edi
 
-	jmp subtens
+			inc j
+			mov cl,j
+			cmp cl,cursor
+			jl j_order
 
-	;Write number
-	printnum:
-
-	;Write tens
-	xor ecx,ecx
-	mov cl,tens
-	mov [esi],ecx
-
-	;Write units
-	mov cl,bl
-	inc esi
-	mov [esi],ecx
-
-	ret_print:
+			inc i
+			mov cl,i
+			cmp cl,cont
+			jl i_order
 
 	ret
-write_matrix endp
+order_matrix endp
 ;------------------------------------------------
 ;Procedure to print number
 print_matrix proc near
@@ -243,14 +258,9 @@ print_matrix proc near
 		j_pmatrix:
 
 		   lea esi,matrix
-		   mapping i, j, rows, columns, 02h
+		   mapping i, j, rows, columns, 01h
 		   add esi,eax
 
-		   mov bl,[esi]
-		   mov tens,bl
-		   write_num tens
-
-		   inc esi
 		   mov bl,[esi]
 		   mov units,bl
 		   write_num units
